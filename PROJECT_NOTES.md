@@ -132,7 +132,7 @@ Open the Developer panel and compare these two poses:
 
 1. `absolute-cinema`
    - raise both open palms clearly away from the sides of the head
-   - expected debug values: `Open palms = 2`, `Side palms = 0`
+   - expected debug values: `Open palms = 2`, `Head touch = 0`
 2. `we-are-cooked`
    - press both palms against the left and right sides of the head
    - expected debug values: `Head touch = 2`
