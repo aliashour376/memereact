@@ -306,6 +306,7 @@ export function App() {
                 <Metric label="On head" value={rawSignals.hands.handsOnHead.toString()} />
                 <Metric label="Head touch" value={rawSignals.hands.headTouches.toString()} />
                 <Metric label="Side palms" value={rawSignals.hands.sideHeadPalmContacts.toString()} />
+                <Metric label="Top palms" value={rawSignals.hands.topHeadPalmContacts.toString()} />
                 <Metric label="Mouth" value={rawSignals.face.mouthOpen.toFixed(2)} />
                 <Metric label="Eyes" value={rawSignals.face.eyeOpenness.toFixed(2)} />
                 <Metric label="Brow" value={rawSignals.face.browFurrow.toFixed(2)} />

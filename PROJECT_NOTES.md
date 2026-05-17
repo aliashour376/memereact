@@ -95,11 +95,15 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
    - Added a stricter `headTouches` signal for actual clustered palm contact on the head.
    - `we-are-cooked` now starts scoring from `Head touch = 2`, with `Mouth d` and `Eyes d` acting as confidence boosts.
 
+7. The first true-contact pass still missed the user's live `we-are-cooked` pose.
+   - The intended pose uses palms on top of the head, not only beside the temples.
+   - Added `topHeadPalmContacts` and changed top-head detection to require both top-of-head placement and a compact hand shape, so upright `absolute-cinema` palms do not count as head contact.
+
 ## Current live-testing notes
 
 - `absolute-cinema` vs `we-are-cooked`: true head-contact separation has now been implemented and needs live validation.
 - `absolute-cinema`: expected to trigger from two raised open palms that are not touching the sides of the head.
-- `we-are-cooked`: expected to begin scoring when both palms are truly touching the head; a normal open mouth and slightly wider eyes should improve confidence.
+- `we-are-cooked`: expected to begin scoring when both palms are truly touching the top or sides of the head; a normal open mouth and slightly wider eyes should improve confidence.
 - `ah-hell-nah`: user reported it is working.
 - `thinking`: user reported it is working.
 - `lmao`: still needs live tuning.
@@ -134,8 +138,8 @@ Open the Developer panel and compare these two poses:
    - raise both open palms clearly away from the sides of the head
    - expected debug values: `Open palms = 2`, `Head touch = 0`
 2. `we-are-cooked`
-   - press both palms against the left and right sides of the head
-   - expected debug values: `Head touch = 2`
+   - rest both palms on top of the head
+   - expected debug values: `Top palms = 2`, `Head touch = 2`
 
 If either pose still misfires, record:
 
@@ -143,6 +147,7 @@ If either pose still misfires, record:
 - `On head`
 - `Head touch`
 - `Side palms`
+- `Top palms`
 - `Mouth d`
 - `Eyes d`
 - candidate list

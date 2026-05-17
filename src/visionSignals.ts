@@ -12,6 +12,7 @@ export interface HandSignals {
   handsOnHead: number;
   headTouches: number;
   sideHeadPalmContacts: number;
+  topHeadPalmContacts: number;
   raisedHandsWithThumbs: number;
 }
 
@@ -41,6 +42,7 @@ export const neutralSignals: VisionSignals = {
     handsOnHead: 0,
     headTouches: 0,
     sideHeadPalmContacts: 0,
+    topHeadPalmContacts: 0,
     raisedHandsWithThumbs: 0
   },
   face: {
@@ -98,6 +100,8 @@ export function deriveVisionSignals(
   const headTiltUp = faceLandmarks.length > 0 ? getHeadTiltUp(faceLandmarks) : 0;
 
   const hands = handResult?.landmarks ?? [];
+  const sideHeadPalmContacts = faceBounds ? hands.filter((hand) => isPalmTouchingSideOfHead(hand, faceBounds)).length : 0;
+  const topHeadPalmContacts = faceBounds ? hands.filter((hand) => isPalmTouchingTopOfHead(hand, faceBounds)).length : 0;
 
   return {
     hands: {
@@ -106,8 +110,14 @@ export function deriveVisionSignals(
       handNearFace: Boolean(faceBounds && hands.some((hand) => isHandNearFace(hand, faceBounds))),
       raisedOpenPalms: hands.filter(isRaisedOpenPalm).length,
       handsOnHead: faceBounds ? hands.filter((hand) => isHandOnHead(hand, faceBounds)).length : 0,
-      headTouches: faceBounds ? hands.filter((hand) => isPalmTouchingHead(hand, faceBounds)).length : 0,
-      sideHeadPalmContacts: faceBounds ? hands.filter((hand) => isPalmTouchingSideOfHead(hand, faceBounds)).length : 0,
+      headTouches: faceBounds
+        ? hands.filter((hand) =>
+            isPalmTouchingSideOfHead(hand, faceBounds) ||
+            isPalmTouchingTopOfHead(hand, faceBounds)
+          ).length
+        : 0,
+      sideHeadPalmContacts,
+      topHeadPalmContacts,
       raisedHandsWithThumbs: hands.filter((hand) => isRaisedOpenPalm(hand) && hasExtendedThumb(hand)).length
     },
     face: {
@@ -282,7 +292,7 @@ function isPalmTouchingSideOfHead(hand: NormalizedLandmark[], faceBounds: Bounds
   return clusteredPalmPoints >= 3;
 }
 
-function isPalmTouchingHead(hand: NormalizedLandmark[], faceBounds: Bounds): boolean {
+function isPalmTouchingTopOfHead(hand: NormalizedLandmark[], faceBounds: Bounds): boolean {
   const palmPoints = getPalmPoints(hand);
   if (palmPoints.length < 5) {
     return false;
@@ -290,28 +300,21 @@ function isPalmTouchingHead(hand: NormalizedLandmark[], faceBounds: Bounds): boo
 
   const width = faceBounds.right - faceBounds.left;
   const height = faceBounds.bottom - faceBounds.top;
-  const zones = [
-    {
-      left: faceBounds.left - width * 0.18,
-      right: faceBounds.left + width * 0.12,
-      top: faceBounds.top + height * 0.12,
-      bottom: faceBounds.top + height * 0.62
-    },
-    {
-      left: faceBounds.right - width * 0.12,
-      right: faceBounds.right + width * 0.18,
-      top: faceBounds.top + height * 0.12,
-      bottom: faceBounds.top + height * 0.62
-    },
-    {
-      left: faceBounds.left + width * 0.18,
-      right: faceBounds.right - width * 0.18,
-      top: faceBounds.top - height * 0.06,
-      bottom: faceBounds.top + height * 0.18
-    }
-  ];
+  const topZone = {
+    left: faceBounds.left + width * 0.12,
+    right: faceBounds.right - width * 0.12,
+    top: faceBounds.top - height * 0.18,
+    bottom: faceBounds.top + height * 0.04
+  };
 
-  return zones.some((zone) => countPointsInZone(palmPoints, zone) >= 3);
+  const palmCenter = {
+    x: average(...palmPoints.map((point) => point.x)),
+    y: average(...palmPoints.map((point) => point.y))
+  };
+  const handBounds = getBounds(hand);
+  const compactHand = handBounds.bottom - handBounds.top <= height * 0.14;
+
+  return compactHand && isPointInZone(palmCenter, topZone) && countPointsInZone(palmPoints, topZone) >= 3;
 }
 
 function getPalmPoints(hand: NormalizedLandmark[]): NormalizedLandmark[] {

@@ -42,6 +42,7 @@ describe('deriveVisionSignals', () => {
     assert.equal(result.hands.raisedHandsWithThumbs, 2);
     assert.equal(result.hands.handsOnHead, 2);
     assert.equal(result.hands.sideHeadPalmContacts, 0);
+    assert.equal(result.hands.topHeadPalmContacts, 0);
     assert.equal(result.hands.headTouches, 0);
   });
 
@@ -68,6 +69,20 @@ describe('deriveVisionSignals', () => {
       { faceLandmarks: [face], faceBlendshapes: [{ categories: [] }] } as never
     );
 
+    assert.equal(result.hands.headTouches, 2);
+  });
+
+  it('detects true palm contact on top of the head', () => {
+    const face = createFace();
+    const leftTopPalm = createCompactPalmCluster(0.42, 0.15);
+    const rightTopPalm = createCompactPalmCluster(0.58, 0.15);
+
+    const result = deriveVisionSignals(
+      { landmarks: [leftTopPalm, rightTopPalm] } as never,
+      { faceLandmarks: [face], faceBlendshapes: [{ categories: [] }] } as never
+    );
+
+    assert.equal(result.hands.topHeadPalmContacts, 2);
     assert.equal(result.hands.headTouches, 2);
   });
 
@@ -119,6 +134,14 @@ function createPalmCluster(centerX: number, centerY: number) {
   return Array.from({ length: 21 }, (_, index) => ({
     x: centerX + ((index % 3) - 1) * 0.01,
     y: centerY + (Math.floor(index / 3) % 3) * 0.01,
+    z: 0
+  }));
+}
+
+function createCompactPalmCluster(centerX: number, centerY: number) {
+  return Array.from({ length: 21 }, (_, index) => ({
+    x: centerX + ((index % 5) - 2) * 0.01,
+    y: centerY + (Math.floor(index / 5) % 2) * 0.01,
     z: 0
   }));
 }
