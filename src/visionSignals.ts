@@ -311,20 +311,17 @@ function isPalmTouchingTopOfHead(hand: NormalizedLandmark[], faceBounds: Bounds)
   const width = faceBounds.right - faceBounds.left;
   const height = faceBounds.bottom - faceBounds.top;
   const topZone = {
-    left: faceBounds.left + width * 0.12,
-    right: faceBounds.right - width * 0.12,
-    top: faceBounds.top - height * 0.18,
-    bottom: faceBounds.top + height * 0.04
+    left: faceBounds.left - width * 1.2,
+    right: faceBounds.right + width * 1.2,
+    top: faceBounds.top - height * 0.2,
+    bottom: faceBounds.top + height * 0.08
   };
 
   const palmCenter = {
     x: average(...palmPoints.map((point) => point.x)),
     y: average(...palmPoints.map((point) => point.y))
   };
-  const handBounds = getBounds(hand);
-  const compactHand = handBounds.bottom - handBounds.top <= height * 0.14;
-
-  return compactHand && isPointInZone(palmCenter, topZone) && countPointsInZone(palmPoints, topZone) >= 3;
+  return isPointInZone(palmCenter, topZone) && countPointsInZone(palmPoints, topZone) >= 3;
 }
 
 function getHeadContactDiagnostics(hand: NormalizedLandmark[], faceBounds: Bounds) {

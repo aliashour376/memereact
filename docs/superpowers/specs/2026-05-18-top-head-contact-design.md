@@ -26,7 +26,7 @@ Add a dedicated top-head palm-contact signal and combine it with side-head conta
 
 - Keep `sideHeadPalmContacts` for side contact.
 - Add `topHeadPalmContacts` for palms resting on top of the head.
-- Classify top-head contact from both location and palm shape: the palm center must be near the top of the head, and the palm landmarks must be compact enough to look like a hand resting on the crown rather than an upright raised palm.
+- Classify top-head contact from measured palm-center placement: the palm center must sit at or above the top of the face region, which is the live separator that distinguishes the user's `we-are-cooked` pose from their working `absolute-cinema` pose.
 - Define `headTouches` as the total number of hands that satisfy either side-head or top-head true-contact geometry.
 - Keep `we-are-cooked` gated by `headTouches >= 2`.
 - Expose `Top palms` in the Developer panel so live testing shows which geometry is firing.
@@ -47,7 +47,7 @@ This would match the user's current pose, but it would discard a valid side-head
 
 - Add `topHeadPalmContacts` to the raw hand signals.
 - Split side and top true-contact checks into explicit helpers.
-- Use a compactness/flatness measurement for top-head contact so upright raised palms are not mistaken for hands resting on the crown.
+- Use a broad horizontal top zone plus a palm-center height cutoff for top-head contact so the detector matches the user's live camera geometry rather than relying on a synthetic hand-shape assumption.
 - Count `headTouches` from the union of those per-hand checks so a hand is counted once even if it overlaps more than one zone.
 
 ### Reaction Rules
@@ -73,7 +73,7 @@ Add focused tests for:
 
 - Two top-of-head palm clusters produce `topHeadPalmContacts = 2`.
 - Two top-of-head palm clusters also produce `headTouches = 2`.
-- Upright raised palms above the head still produce `headTouches = 0`.
+- Upright raised palms in the user's `absolute-cinema` range still produce `headTouches = 0`.
 - Existing side-head contact tests continue to pass unchanged.
 
 ## Out Of Scope

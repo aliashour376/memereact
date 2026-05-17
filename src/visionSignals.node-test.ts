@@ -5,27 +5,27 @@ import { deriveVisionSignals } from './visionSignals.ts';
 describe('deriveVisionSignals', () => {
   it('detects two raised open-ish hands without side-head palm contact', () => {
     const hand = [
-      { x: 0.3, y: 0.2, z: 0 },
-      { x: 0.28, y: 0.16, z: 0 },
-      { x: 0.26, y: 0.14, z: 0 },
-      { x: 0.24, y: 0.12, z: 0 },
-      { x: 0.22, y: 0.1, z: 0 },
-      { x: 0.31, y: 0.15, z: 0 },
-      { x: 0.31, y: 0.12, z: 0 },
-      { x: 0.31, y: 0.09, z: 0 },
-      { x: 0.31, y: 0.05, z: 0 },
-      { x: 0.34, y: 0.15, z: 0 },
-      { x: 0.34, y: 0.12, z: 0 },
-      { x: 0.34, y: 0.09, z: 0 },
-      { x: 0.34, y: 0.05, z: 0 },
-      { x: 0.37, y: 0.15, z: 0 },
-      { x: 0.37, y: 0.12, z: 0 },
-      { x: 0.37, y: 0.09, z: 0 },
-      { x: 0.37, y: 0.05, z: 0 },
-      { x: 0.4, y: 0.15, z: 0 },
-      { x: 0.4, y: 0.12, z: 0 },
-      { x: 0.4, y: 0.09, z: 0 },
-      { x: 0.4, y: 0.05, z: 0 }
+      { x: 0.3, y: 0.39, z: 0 },
+      { x: 0.28, y: 0.35, z: 0 },
+      { x: 0.26, y: 0.33, z: 0 },
+      { x: 0.24, y: 0.31, z: 0 },
+      { x: 0.22, y: 0.29, z: 0 },
+      { x: 0.31, y: 0.34, z: 0 },
+      { x: 0.31, y: 0.31, z: 0 },
+      { x: 0.31, y: 0.28, z: 0 },
+      { x: 0.31, y: 0.24, z: 0 },
+      { x: 0.34, y: 0.34, z: 0 },
+      { x: 0.34, y: 0.31, z: 0 },
+      { x: 0.34, y: 0.28, z: 0 },
+      { x: 0.34, y: 0.24, z: 0 },
+      { x: 0.37, y: 0.34, z: 0 },
+      { x: 0.37, y: 0.31, z: 0 },
+      { x: 0.37, y: 0.28, z: 0 },
+      { x: 0.37, y: 0.24, z: 0 },
+      { x: 0.4, y: 0.34, z: 0 },
+      { x: 0.4, y: 0.31, z: 0 },
+      { x: 0.4, y: 0.28, z: 0 },
+      { x: 0.4, y: 0.24, z: 0 }
     ];
 
     const face = createFace();
@@ -45,7 +45,7 @@ describe('deriveVisionSignals', () => {
     assert.equal(result.hands.topHeadPalmContacts, 0);
     assert.equal(result.hands.headTouches, 0);
     assert.deepEqual(result.hands.palmCenterXRatio, [0.11, 0.86]);
-    assert.deepEqual(result.hands.palmCenterYRatio, [-0.07, -0.07]);
+    assert.deepEqual(result.hands.palmCenterYRatio, [0.25, 0.25]);
     assert.deepEqual(result.hands.handHeightRatio, [0.25, 0.25]);
   });
 
@@ -77,8 +77,8 @@ describe('deriveVisionSignals', () => {
 
   it('detects true palm contact on top of the head', () => {
     const face = createFace();
-    const leftTopPalm = createCompactPalmCluster(0.42, 0.15);
-    const rightTopPalm = createCompactPalmCluster(0.58, 0.15);
+    const leftTopPalm = createPalmCluster(1.06, 0.19);
+    const rightTopPalm = createPalmCluster(0.78, 0.14);
 
     const result = deriveVisionSignals(
       { landmarks: [leftTopPalm, rightTopPalm] } as never,
@@ -87,9 +87,9 @@ describe('deriveVisionSignals', () => {
 
     assert.equal(result.hands.topHeadPalmContacts, 2);
     assert.equal(result.hands.headTouches, 2);
-    assert.deepEqual(result.hands.palmCenterXRatio, [0.3, 0.7]);
-    assert.deepEqual(result.hands.palmCenterYRatio, [-0.07, -0.07]);
-    assert.deepEqual(result.hands.handHeightRatio, [0.02, 0.02]);
+    assert.deepEqual(result.hands.palmCenterXRatio, [1.9, 1.2]);
+    assert.deepEqual(result.hands.palmCenterYRatio, [-0, -0.09]);
+    assert.deepEqual(result.hands.handHeightRatio, [0.03, 0.03]);
   });
 
   it('limits the thinking zone to the mouth and chin area', () => {
@@ -140,14 +140,6 @@ function createPalmCluster(centerX: number, centerY: number) {
   return Array.from({ length: 21 }, (_, index) => ({
     x: centerX + ((index % 3) - 1) * 0.01,
     y: centerY + (Math.floor(index / 3) % 3) * 0.01,
-    z: 0
-  }));
-}
-
-function createCompactPalmCluster(centerX: number, centerY: number) {
-  return Array.from({ length: 21 }, (_, index) => ({
-    x: centerX + ((index % 5) - 2) * 0.01,
-    y: centerY + (Math.floor(index / 5) % 2) * 0.01,
     z: 0
   }));
 }
