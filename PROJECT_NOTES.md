@@ -99,14 +99,19 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
    - The intended pose uses palms on top of the head, not only beside the temples.
    - Added `topHeadPalmContacts` and changed top-head detection to require both top-of-head placement and a compact hand shape, so upright `absolute-cinema` palms do not count as head contact.
 
+8. Direct pose-to-pose switching felt delayed after detection started working.
+   - The controller now keeps neutral-gap hold behavior, but a different leading pose can replace the active reaction once it has remained stable for the normal stability window.
+   - Clean pose-to-pose handoffs no longer wait for the old hold window to expire or enter cooldown first.
+
 ## Current live-testing notes
 
 - `absolute-cinema` vs `we-are-cooked`: true head-contact separation has now been implemented and needs live validation.
 - `absolute-cinema`: expected to trigger from two raised open palms that are not touching the sides of the head.
 - `we-are-cooked`: expected to begin scoring when both palms are truly touching the top or sides of the head; a normal open mouth and slightly wider eyes should improve confidence.
+- Direct handoffs between valid poses should now feel responsive once the new pose stays stable for roughly a quarter second.
 - `ah-hell-nah`: user reported it is working.
 - `thinking`: user reported it is working.
-- `lmao`: still needs live tuning.
+- `lmao`: still needs live tuning and is the next target after the transition feel is validated.
 
 ## Next useful test for `lmao`
 
