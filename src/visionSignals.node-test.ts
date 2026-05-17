@@ -44,6 +44,9 @@ describe('deriveVisionSignals', () => {
     assert.equal(result.hands.sideHeadPalmContacts, 0);
     assert.equal(result.hands.topHeadPalmContacts, 0);
     assert.equal(result.hands.headTouches, 0);
+    assert.deepEqual(result.hands.palmCenterXRatio, [0.11, 0.86]);
+    assert.deepEqual(result.hands.palmCenterYRatio, [-0.07, -0.07]);
+    assert.deepEqual(result.hands.handHeightRatio, [0.25, 0.25]);
   });
 
   it('detects palm contact on both sides of the head', () => {
@@ -84,6 +87,9 @@ describe('deriveVisionSignals', () => {
 
     assert.equal(result.hands.topHeadPalmContacts, 2);
     assert.equal(result.hands.headTouches, 2);
+    assert.deepEqual(result.hands.palmCenterXRatio, [0.3, 0.7]);
+    assert.deepEqual(result.hands.palmCenterYRatio, [-0.07, -0.07]);
+    assert.deepEqual(result.hands.handHeightRatio, [0.02, 0.02]);
   });
 
   it('limits the thinking zone to the mouth and chin area', () => {

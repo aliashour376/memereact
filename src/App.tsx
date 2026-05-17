@@ -307,6 +307,9 @@ export function App() {
                 <Metric label="Head touch" value={rawSignals.hands.headTouches.toString()} />
                 <Metric label="Side palms" value={rawSignals.hands.sideHeadPalmContacts.toString()} />
                 <Metric label="Top palms" value={rawSignals.hands.topHeadPalmContacts.toString()} />
+                <Metric label="Palm x" value={formatRatios(rawSignals.hands.palmCenterXRatio)} />
+                <Metric label="Palm y" value={formatRatios(rawSignals.hands.palmCenterYRatio)} />
+                <Metric label="Hand h" value={formatRatios(rawSignals.hands.handHeightRatio)} />
                 <Metric label="Mouth" value={rawSignals.face.mouthOpen.toFixed(2)} />
                 <Metric label="Eyes" value={rawSignals.face.eyeOpenness.toFixed(2)} />
                 <Metric label="Brow" value={rawSignals.face.browFurrow.toFixed(2)} />
@@ -355,4 +358,8 @@ function Metric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function formatRatios(values: number[]): string {
+  return values.length > 0 ? values.map((value) => value.toFixed(2)).join(' / ') : '-';
 }

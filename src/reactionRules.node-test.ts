@@ -13,6 +13,9 @@ const neutralSignals: NormalizedSignals = {
     headTouches: 0,
     sideHeadPalmContacts: 0,
     topHeadPalmContacts: 0,
+    palmCenterXRatio: [],
+    palmCenterYRatio: [],
+    handHeightRatio: [],
     raisedHandsWithThumbs: 0
   },
   face: {
