@@ -4,7 +4,7 @@
 
 **Goal:** Detect top-of-head palm contact for `we-are-cooked` while preserving side-head contact support and clear live-debugging metrics.
 
-**Architecture:** Keep side-head and top-head true-contact checks separate in the vision layer, then derive `headTouches` from their union per hand. Leave the reaction rules unchanged and surface the new top-contact count in the Developer panel for live tuning.
+**Architecture:** Keep side-head and top-head true-contact checks separate in the vision layer, then derive `headTouches` from their union per hand. Top-head contact uses both location and palm compactness so a hand resting on the crown is not confused with an upright raised palm. Leave the reaction rules unchanged and surface the new top-contact count in the Developer panel for live tuning.
 
 **Tech Stack:** React 19, TypeScript, Node test runner, MediaPipe Tasks Vision, Vite.
 
@@ -85,7 +85,14 @@ headTouches: faceBounds
   : 0,
 ```
 
-Implement `isPalmTouchingTopOfHead()` with a zone above the face bounds wide enough for palms resting on the crown but still narrow enough to reject raised hands that are merely nearby.
+Implement `isPalmTouchingTopOfHead()` with:
+
+```ts
+const palmHeight = getBounds(palmPoints).bottom - getBounds(palmPoints).top;
+const compactPalm = palmHeight <= height * 0.14;
+```
+
+and require both a top-zone center hit plus `compactPalm`, so upright raised palms above the face do not count as top-head contact.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
@@ -115,7 +122,7 @@ Document that:
 
 - the intended live `we-are-cooked` pose is top-of-head contact,
 - `Top palms = 2` and `Head touch = 2` are the expected debug values,
-- the next validation should compare raised palms with top-head contact.
+- the next validation should compare upright raised palms with compact top-head contact.
 
 - [ ] **Step 3: Run full verification**
 
@@ -128,6 +135,6 @@ Expected: all tests pass and the build completes.
 
 ## Self-Review
 
-- Spec coverage: top-head contact, combined head-touch counting, unchanged reaction rules, and developer visibility are all covered.
+- Spec coverage: top-head contact, compact-palm separation, combined head-touch counting, unchanged reaction rules, and developer visibility are all covered.
 - Placeholder scan: no deferred implementation placeholders remain.
 - Type consistency: `topHeadPalmContacts` is used consistently across signals, tests, UI, and notes.
