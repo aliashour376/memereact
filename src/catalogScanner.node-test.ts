@@ -25,6 +25,6 @@ describe('createCatalogModule', () => {
       happy: ["that's happy.jpg"]
     });
 
-    assert.match(moduleSource, /src: '\/memes\/happy\/that%27s%20happy\.jpg'/);
+    assert.match(moduleSource, /src: assetSrc\('memes\/happy\/that%27s%20happy\.jpg'\)/);
   });
 });

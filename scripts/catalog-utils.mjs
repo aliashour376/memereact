@@ -34,6 +34,9 @@ export function createCatalogModule(scannedCatalog) {
   const lines = [
     "import type { MemeCatalog } from '../memeTypes.ts';",
     '',
+    "const basePath = import.meta.env?.BASE_URL ?? '/';",
+    "const assetSrc = (path: string) => `${basePath}${path}`;",
+    '',
     'export const localMemeCatalog: MemeCatalog = {'
   ];
 
@@ -44,7 +47,7 @@ export function createCatalogModule(scannedCatalog) {
     for (const file of files) {
       const encodedFile = encodeURIComponent(file).replace(/'/g, '%27');
       lines.push(
-        `    { id: '${category}-${slugify(file)}', category: '${category}', src: '/memes/${category}/${encodedFile}' },`
+        `    { id: '${category}-${slugify(file)}', category: '${category}', src: assetSrc('memes/${category}/${encodedFile}') },`
       );
     }
 
