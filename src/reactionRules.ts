@@ -46,30 +46,20 @@ const reactionRules: ReactionRule[] = [
   },
   {
     category: 'thinking',
-    reason: 'hand near mouth',
-    evaluate: (signals) => signals.hands.handNearFace ? 0.88 : 0
+    reason: 'finger near mouth',
+    evaluate: (signals) => signals.hands.fingerNearMouth ? 0.88 : 0
   },
   {
-    category: 'lmao',
-    reason: 'unimpressed deadpan',
+    category: 'happy',
+    reason: 'tongue out',
     evaluate: (signals) => {
-      if (signals.hands.handCount > 0) {
+      const tongue = ramp(signals.face.tongueOutDelta, 0.08, 0.18) * 0.8;
+      if (tongue === 0) {
         return 0;
       }
 
-      const expressiveFace =
-        signals.face.headTiltUpDelta > 0.04 ||
-        signals.face.mouthOpenDelta > 0.04 ||
-        signals.face.eyeOpennessDelta > 0.04 ||
-        signals.face.browFurrowDelta > 0.08;
-      if (expressiveFace) {
-        return 0;
-      }
-
-      const frown = ramp(signals.face.mouthFrown, 0.08, 0.18) * 0.8;
-      const calmMouth = 1 - ramp(signals.face.mouthOpenDelta, 0.02, 0.1);
-      const calmEyes = 1 - ramp(signals.face.eyeOpennessDelta, 0.02, 0.12);
-      return frown + Math.min(calmMouth, calmEyes) * 0.2;
+      const smile = ramp(signals.face.smileDelta, 0.08, 0.2) * 0.2;
+      return tongue + smile;
     }
   }
 ];

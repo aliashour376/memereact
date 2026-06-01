@@ -70,11 +70,11 @@ describe('createReactionController', () => {
       holdMs: 900,
       cooldownMs: 250
     });
-    const lmao = [{ category: 'lmao' as const, score: 0.95, reason: 'deadpan' }];
+    const happy = [{ category: 'happy' as const, score: 0.95, reason: 'tongue cue' }];
 
-    controller.update(lmao, 1000);
-    controller.update(lmao, 1120);
-    const interrupted = controller.update([], 1200, new Set(['lmao']));
+    controller.update(happy, 1000);
+    controller.update(happy, 1120);
+    const interrupted = controller.update([], 1200, new Set(['happy']));
 
     assert.equal(interrupted.activeReaction, null);
   });

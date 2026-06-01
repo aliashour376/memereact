@@ -1,0 +1,28 @@
+{
+  "name": "memereact",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "generate:catalog": "node scripts/generate-meme-catalog.mjs",
+    "predev": "npm run generate:catalog",
+    "dev": "node node_modules/vite/bin/vite.js --host 127.0.0.1",
+    "prebuild": "npm run generate:catalog",
+    "build": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
+    "preview": "node node_modules/vite/bin/vite.js preview --host 127.0.0.1",
+    "pretest": "npm run generate:catalog",
+    "test": "node --test --experimental-strip-types \"src/**/*.node-test.ts\""
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "vite": "^7.2.7",
+    "typescript": "^5.9.3",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "lucide-react": "^0.560.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3"
+  }
+}

@@ -1,6 +1,6 @@
 # Meme React Project Notes
 
-Last updated: 2026-05-18
+Last updated: 2026-06-01
 
 ## Project reset
 
@@ -11,7 +11,7 @@ Last updated: 2026-05-18
   - `we-are-cooked`
   - `ah-hell-nah`
   - `thinking`
-  - `lmao`
+  - `happy`
 
 ## Current meme files
 
@@ -19,7 +19,7 @@ Last updated: 2026-05-18
 - `public/memes/we-are-cooked/we are cooked.jpg`
 - `public/memes/ah-hell-nah/ah hell nah.jpg`
 - `public/memes/thinking/thinks.jpg`
-- `public/memes/lmao/lmao.jpg`
+- `public/memes/happy/happy.jpg`
 
 The generated catalog is rebuilt automatically by the dev, test, and build commands.
 
@@ -41,34 +41,28 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
 
 - Expected user pose: both hands on head, mouth open, eyes somewhat wider than neutral.
 - Current code requirement: true palm contact from both hands on the head.
-- Open-mouth and eye-widening cues now increase confidence, but they are no longer required for the pose to become a candidate.
+- Open-mouth and eye-widening cues increase confidence, but they are no longer required for the pose to become a candidate.
 - User preference: it should not require an extreme expression; a normal open mouth with slightly wide eyes should be enough.
 
 ### `ah-hell-nah`
 
 - Expected user pose: looking upward in shock.
 - Current code requirement: upward head tilt plus some mouth opening.
-- User reported this one is currently working well.
+- User reported this one is working well.
 
 ### `thinking`
 
-- Expected user pose: finger or hand near mouth/chin.
-- Current code requirement: hand in the mouth/chin zone, not merely anywhere near the face.
-- This was narrowed because the old version triggered whenever a hand was visible near the head.
-- User reported this one is currently working well.
+- Expected user pose: index finger near the mouth/chin, matching the meme pose.
+- Current code requirement: an index fingertip in the mouth/chin zone, with a non-open-palm hand shape.
+- A broad hand near the face or mouth no longer scores this reaction.
 
-### `lmao`
+### `happy`
 
-- Intended meaning: deadpan / not amused reaction, matching the meme image rather than literal laughter.
-- Expected user pose:
-  - no hands visible
-  - face looking forward
-  - mouth closed
-  - relaxed eyes
-  - slight downturned or unimpressed mouth
-- Current code blocks `lmao` if any hand is visible or if the face is expressive enough to resemble another pose.
-- This rule was made conservative because earlier it was incorrectly taking over when hands were on camera.
-- User reported that `lmao` has not shown reliably yet.
+- Expected user pose: tongue out, with a smile helping confidence.
+- Current code requirement: normalized tongue cue above threshold.
+- Smile by itself does not score the reaction.
+- Hands do not block this reaction.
+- If MediaPipe exposes direct `tongueOut`, the app uses it. Otherwise, it derives a conservative tongue cue from an open smiling mouth.
 
 ## Issues already fixed
 
@@ -82,9 +76,9 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
 3. Reactions flickered on and off while a pose was still being held.
    - The active reaction now renews while the same pose remains present.
 
-4. `lmao` used to win when hands appeared in frame.
-   - `lmao` now returns no score when any hands are visible.
-   - Active `lmao` is immediately invalidated when hands appear.
+4. The retired deadpan fifth reaction used to win when hands appeared in frame.
+   - The fifth reaction has been replaced with `happy`.
+   - The old hand-visible invalidation path was removed because `happy` should work while hands are visible.
 
 5. `absolute-cinema` and `we-are-cooked` overlapped too much.
    - The original broad `handsOnHead` split was replaced with a more specific `sideHeadPalmContacts` signal.
@@ -103,34 +97,55 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
    - The controller now keeps neutral-gap hold behavior, but a different leading pose can replace the active reaction once it has remained stable for the normal stability window.
    - Clean pose-to-pose handoffs no longer wait for the old hold window to expire or enter cooldown first.
 
+9. The fifth reaction was replaced with `happy`.
+   - The active category, generated catalog, UI label, reaction rule, tests, and developer metrics now use `happy`.
+   - Raw signals now include `Tongue` and `Smile`.
+   - Normalized signals now include `Tongue d` and `Smile d`.
+
 ## Current live-testing notes
 
-- `absolute-cinema` vs `we-are-cooked`: true head-contact separation has now been implemented and needs live validation.
-- `absolute-cinema`: expected to trigger from two raised open palms that are not touching the sides of the head.
+- `absolute-cinema` vs `we-are-cooked`: true head-contact separation has been implemented and needs live validation.
+- `absolute-cinema`: expected to trigger from two raised open palms that are not touching the sides or top of the head.
 - `we-are-cooked`: expected to begin scoring when both palms are truly touching the top or sides of the head; a normal open mouth and slightly wider eyes should improve confidence.
-- Direct handoffs between valid poses should now feel responsive once the new pose stays stable for roughly a quarter second.
+- Direct handoffs between valid poses should feel responsive once the new pose stays stable for roughly a quarter second.
 - `ah-hell-nah`: user reported it is working.
-- `thinking`: user reported it is working.
-- `lmao`: still needs live tuning and is the next target after the transition feel is validated.
+- `thinking`: should now require the visible finger cue instead of any hand near the face.
+- `happy`: expected to trigger from tongue out; smile should increase confidence but should not trigger by itself.
 
-## Next useful test for `lmao`
+## Next useful test for `thinking`
+
+Open the Developer panel and compare these two poses:
+
+1. `thinking`
+   - place only your index finger near your mouth or chin
+   - expected debug values: `Near face = yes`, `Finger mouth = yes`
+2. Broad hand near face
+   - bring your whole hand near your mouth without a clear pointing finger
+   - expected debug values: `Near face = yes`, `Finger mouth = no`
+
+If it still misfires, record:
+
+- `Near face`
+- `Finger mouth`
+- `Hands`
+- candidate list
+
+## Next useful test for `happy`
 
 Try this exact pose:
 
-1. Keep both hands fully out of frame.
-2. Look straight into the camera.
-3. Keep your mouth closed.
-4. Keep your eyes relaxed, not wide and not squinting.
-5. Make a mild unimpressed face with the mouth corners slightly down.
-6. Hold the pose for about one second.
+1. Start from a neutral calibrated face.
+2. Stick your tongue out toward the camera.
+3. Optionally smile while holding the tongue-out pose.
+4. Keep holding for about one second.
 
-If `lmao` still does not appear, open the Developer panel and record these values while holding the deadpan pose:
+If `happy` does not appear, open the Developer panel and record:
 
+- `Tongue`
+- `Smile`
+- `Tongue d`
+- `Smile d`
 - `Hands`
-- `Frown`
-- `Mouth d`
-- `Eyes d`
-- `Head up d`
 - candidate list
 
 Those values should be used for the next tuning pass instead of guessing.
@@ -140,7 +155,7 @@ Those values should be used for the next tuning pass instead of guessing.
 Open the Developer panel and compare these two poses:
 
 1. `absolute-cinema`
-   - raise both open palms clearly away from the sides of the head
+   - raise both open palms clearly away from the sides and top of the head
    - expected debug values: `Open palms = 2`, `Head touch = 0`
 2. `we-are-cooked`
    - rest both palms on top of the head
@@ -159,9 +174,14 @@ If either pose still misfires, record:
 
 ## Next-session handoff
 
-- First thing when resuming this project: ask the user whether they want the dev server started so they can live-test the new `absolute-cinema` versus `we-are-cooked` separation.
-- This live test was deferred on 2026-05-17 because the user needed to shut down their laptop due to low battery.
-- Do **not** move on to `lmao` tuning until the user has had a chance to validate the new true head-contact behavior live.
+- Restart handoff: the user is happy with the current direction and confirmed the stricter `thinking` trigger is working live.
+- All current meme photos are working well.
+- The fifth category is `happy`; the old deadpan fifth reaction has been retired.
+- `thinking` now depends on `Finger mouth = yes`, not merely `Near face = yes`.
+- First thing in a new chat: inspect `git status --short`, read this file, then continue from the current working tree without reverting user or agent changes.
+- If live tuning resumes, start or reuse the dev server at `http://127.0.0.1:5173/` and open the Developer panel.
+- Validate `thinking` from recorded `Near face`, `Finger mouth`, and candidate-list values if it needs more tuning.
+- Validate `happy` from recorded `Tongue`, `Smile`, `Tongue d`, `Smile d`, and candidate-list values if it needs more tuning.
 
 ## Current commands
 
@@ -180,7 +200,9 @@ http://127.0.0.1:5173/
 
 ## Current verification
 
-Latest verified state on 2026-05-18:
+Latest verified state on 2026-06-01:
 
-- `npm.cmd test`: 29 tests passed
+- `node --test --experimental-strip-types "src/visionSignals.node-test.ts"`: 10 tests passed
+- `node --test --experimental-strip-types "src/reactionRules.node-test.ts"`: 15 tests passed
+- `npm.cmd test`: 45 tests passed
 - `npm.cmd run build`: passed

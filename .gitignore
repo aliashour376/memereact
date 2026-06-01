@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vite/
+.superpowers/
+*.local
+*.log
+Thumbs.db
+.DS_Store

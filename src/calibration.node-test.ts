@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   createCalibrationSession,
   normalizeSignals,
+  toCalibrationSample,
   type CalibrationSample
 } from './calibration.ts';
 import type { VisionSignals } from './visionSignals.ts';
@@ -14,18 +15,65 @@ const neutralSample: CalibrationSample = {
   squint: 0.08,
   faceScale: 0.2,
   mouthFrown: 0.05,
-  lookUp: 0.04
-  ,
+  lookUp: 0.04,
+  tongueOut: 0.07,
+  smile: 0.09,
   headTiltUp: 0.03
 };
 
 describe('calibration', () => {
+  it('captures raw tongue-out and smile values in calibration samples', () => {
+    const signals: VisionSignals = {
+      hands: {
+        thumbsUp: false,
+        handNearFace: false,
+        fingerNearMouth: false,
+        handCount: 0,
+        raisedOpenPalms: 0,
+        handsOnHead: 0,
+        headTouches: 0,
+        sideHeadPalmContacts: 0,
+        topHeadPalmContacts: 0,
+        palmCenterXRatio: [],
+        palmCenterYRatio: [],
+        handHeightRatio: [],
+        raisedHandsWithThumbs: 0
+      },
+      face: {
+        facePresent: true,
+        mouthOpen: 0.1,
+        eyeOpenness: 0.2,
+        browFurrow: 0.15,
+        squint: 0.08,
+        faceScale: 0.2,
+        mouthFrown: 0.05,
+        lookUp: 0.04,
+        tongueOut: 0.7,
+        smile: 0.6,
+        headTiltUp: 0.03
+      }
+    };
+
+    assert.deepEqual(toCalibrationSample(signals), {
+      mouthOpen: 0.1,
+      eyeOpenness: 0.2,
+      browFurrow: 0.15,
+      squint: 0.08,
+      faceScale: 0.2,
+      mouthFrown: 0.05,
+      lookUp: 0.04,
+      tongueOut: 0.7,
+      smile: 0.6,
+      headTiltUp: 0.03
+    });
+  });
+
   it('averages accepted neutral samples into a baseline', () => {
     const session = createCalibrationSession(3);
 
     session.addSample(neutralSample);
-    session.addSample({ ...neutralSample, mouthOpen: 0.16, faceScale: 0.24 });
-    session.addSample({ ...neutralSample, mouthOpen: 0.13, faceScale: 0.22 });
+    session.addSample({ ...neutralSample, mouthOpen: 0.16, faceScale: 0.24, tongueOut: 0.1, smile: 0.12 });
+    session.addSample({ ...neutralSample, mouthOpen: 0.13, faceScale: 0.22, tongueOut: 0.04, smile: 0.06 });
 
     assert.equal(session.isComplete(), true);
     assert.deepEqual(session.getBaseline(), {
@@ -36,6 +84,8 @@ describe('calibration', () => {
       faceScale: 0.22,
       mouthFrown: 0.05,
       lookUp: 0.04,
+      tongueOut: 0.07,
+      smile: 0.09,
       headTiltUp: 0.03
     });
   });
@@ -45,6 +95,7 @@ describe('calibration', () => {
       hands: {
         thumbsUp: false,
         handNearFace: true,
+        fingerNearMouth: true,
         handCount: 1,
         raisedOpenPalms: 0,
         handsOnHead: 0,
@@ -65,6 +116,8 @@ describe('calibration', () => {
         faceScale: 0.33,
         mouthFrown: 0.2,
         lookUp: 0.31,
+        tongueOut: 0.7,
+        smile: 0.6,
         headTiltUp: 0.21
       }
     };
@@ -81,6 +134,8 @@ describe('calibration', () => {
         faceScaleRatio: 1.65,
         mouthFrownDelta: 0.15,
         lookUpDelta: 0.27,
+        tongueOutDelta: 0.63,
+        smileDelta: 0.51,
         headTiltUpDelta: 0.18
       }
     });
@@ -91,6 +146,7 @@ describe('calibration', () => {
       hands: {
         thumbsUp: false,
         handNearFace: false,
+        fingerNearMouth: false,
         handCount: 0,
         raisedOpenPalms: 0,
         handsOnHead: 0,
@@ -111,6 +167,8 @@ describe('calibration', () => {
         faceScale: 0,
         mouthFrown: 0,
         lookUp: 0,
+        tongueOut: 0,
+        smile: 0,
         headTiltUp: 0
       }
     };
@@ -127,6 +185,8 @@ describe('calibration', () => {
         faceScaleRatio: 0,
         mouthFrownDelta: 0,
         lookUpDelta: 0,
+        tongueOutDelta: 0,
+        smileDelta: 0,
         headTiltUpDelta: 0
       }
     });

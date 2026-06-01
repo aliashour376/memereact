@@ -7,6 +7,7 @@ const neutralSignals: NormalizedSignals = {
   hands: {
     thumbsUp: false,
     handNearFace: false,
+    fingerNearMouth: false,
     handCount: 0,
     raisedOpenPalms: 0,
     handsOnHead: 0,
@@ -20,6 +21,7 @@ const neutralSignals: NormalizedSignals = {
   },
   face: {
     facePresent: true,
+    mouthFrown: 0,
     mouthOpenDelta: 0,
     eyeOpennessDelta: 0,
     browFurrowDelta: 0,
@@ -27,6 +29,8 @@ const neutralSignals: NormalizedSignals = {
     faceScaleRatio: 1,
     mouthFrownDelta: 0,
     lookUpDelta: 0,
+    tongueOutDelta: 0,
+    smileDelta: 0,
     headTiltUpDelta: 0
   }
 };
@@ -113,13 +117,22 @@ describe('evaluateReactionRules', () => {
     assert.equal(result[0]?.category, 'ah-hell-nah');
   });
 
-  it('scores thinking from hand-near-mouth pose alone', () => {
+  it('scores thinking from an index finger near the mouth', () => {
     const result = evaluateReactionRules({
       ...neutralSignals,
-      hands: { ...neutralSignals.hands, handNearFace: true, handCount: 1 }
+      hands: { ...neutralSignals.hands, handNearFace: true, fingerNearMouth: true, handCount: 1 }
     });
 
     assert.equal(result[0]?.category, 'thinking');
+  });
+
+  it('does not score thinking from a broad hand near the mouth', () => {
+    const result = evaluateReactionRules({
+      ...neutralSignals,
+      hands: { ...neutralSignals.hands, handNearFace: true, fingerNearMouth: false, handCount: 1 }
+    });
+
+    assert.equal(result.find((candidate) => candidate.category === 'thinking'), undefined);
   });
 
   it('does not score thinking when a hand is only near the side of the face', () => {
@@ -131,38 +144,45 @@ describe('evaluateReactionRules', () => {
     assert.equal(result.find((candidate) => candidate.category === 'thinking'), undefined);
   });
 
-  it('scores lmao highest for an unimpressed straight face', () => {
+  it('scores happy from tongue out alone', () => {
     const result = evaluateReactionRules({
       ...neutralSignals,
-      face: { ...neutralSignals.face, mouthFrown: 0.18 }
+      face: { ...neutralSignals.face, tongueOutDelta: 0.18 }
     });
 
-    assert.equal(result[0]?.category, 'lmao');
+    assert.equal(result[0]?.category, 'happy');
   });
 
-  it('does not score lmao while any hand is visible', () => {
+  it('raises happy confidence when smile is also present', () => {
+    const tongueOnly = evaluateReactionRules({
+      ...neutralSignals,
+      face: { ...neutralSignals.face, tongueOutDelta: 0.18 }
+    });
+    const smiling = evaluateReactionRules({
+      ...neutralSignals,
+      face: { ...neutralSignals.face, tongueOutDelta: 0.18, smileDelta: 0.2 }
+    });
+
+    assert.ok((smiling[0]?.score ?? 0) > (tongueOnly[0]?.score ?? 0));
+  });
+
+  it('does not score happy from smile alone', () => {
+    const result = evaluateReactionRules({
+      ...neutralSignals,
+      face: { ...neutralSignals.face, smileDelta: 0.2 }
+    });
+
+    assert.equal(result.find((candidate) => candidate.category === 'happy'), undefined);
+  });
+
+  it('does not suppress happy while hands are visible', () => {
     const result = evaluateReactionRules({
       ...neutralSignals,
       hands: { ...neutralSignals.hands, handCount: 2 },
-      face: { ...neutralSignals.face, mouthFrown: 0.18 }
+      face: { ...neutralSignals.face, tongueOutDelta: 0.18 }
     });
 
-    assert.equal(result.find((candidate) => candidate.category === 'lmao'), undefined);
-  });
-
-  it('does not score lmao during an ah hell nah pose', () => {
-    const result = evaluateReactionRules({
-      ...neutralSignals,
-      face: {
-        ...neutralSignals.face,
-        mouthFrown: 0.18,
-        headTiltUpDelta: 0.22,
-        mouthOpenDelta: 0.14
-      }
-    });
-
-    assert.equal(result[0]?.category, 'ah-hell-nah');
-    assert.equal(result.find((candidate) => candidate.category === 'lmao'), undefined);
+    assert.equal(result[0]?.category, 'happy');
   });
 
   it('returns no candidates for neutral signals', () => {

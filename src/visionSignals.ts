@@ -7,6 +7,7 @@ import type {
 export interface HandSignals {
   thumbsUp: boolean;
   handNearFace: boolean;
+  fingerNearMouth: boolean;
   handCount: number;
   raisedOpenPalms: number;
   handsOnHead: number;
@@ -28,6 +29,8 @@ export interface FaceSignals {
   faceScale: number;
   mouthFrown: number;
   lookUp: number;
+  tongueOut: number;
+  smile: number;
   headTiltUp: number;
 }
 
@@ -40,6 +43,7 @@ export const neutralSignals: VisionSignals = {
   hands: {
     thumbsUp: false,
     handNearFace: false,
+    fingerNearMouth: false,
     handCount: 0,
     raisedOpenPalms: 0,
     handsOnHead: 0,
@@ -60,6 +64,8 @@ export const neutralSignals: VisionSignals = {
     faceScale: 0,
     mouthFrown: 0,
     lookUp: 0,
+    tongueOut: 0,
+    smile: 0,
     headTiltUp: 0
   }
 };
@@ -103,6 +109,11 @@ export function deriveVisionSignals(
     getBlendshape(blendshapes, 'eyeLookUpLeft'),
     getBlendshape(blendshapes, 'eyeLookUpRight')
   );
+  const smile = average(
+    getBlendshape(blendshapes, 'mouthSmileLeft'),
+    getBlendshape(blendshapes, 'mouthSmileRight')
+  );
+  const tongueOut = deriveTongueOut(getBlendshape(blendshapes, 'tongueOut'), mouthOpen, smile);
   const headTiltUp = faceLandmarks.length > 0 ? getHeadTiltUp(faceLandmarks) : 0;
 
   const hands = handResult?.landmarks ?? [];
@@ -115,6 +126,7 @@ export function deriveVisionSignals(
       handCount: hands.length,
       thumbsUp: hands.some(isThumbsUp),
       handNearFace: Boolean(faceBounds && hands.some((hand) => isHandNearFace(hand, faceBounds))),
+      fingerNearMouth: Boolean(faceBounds && hands.some((hand) => isFingerNearMouth(hand, faceBounds))),
       raisedOpenPalms: hands.filter(isRaisedOpenPalm).length,
       handsOnHead: faceBounds ? hands.filter((hand) => isHandOnHead(hand, faceBounds)).length : 0,
       headTouches: faceBounds
@@ -139,6 +151,8 @@ export function deriveVisionSignals(
       faceScale: faceBounds?.area ?? 0,
       mouthFrown,
       lookUp,
+      tongueOut,
+      smile,
       headTiltUp
     }
   };
@@ -154,6 +168,18 @@ function average(...values: number[]): number {
   }
 
   return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function deriveTongueOut(directTongueOut: number, mouthOpen: number, smile: number): number {
+  if (directTongueOut > 0) {
+    return directTongueOut;
+  }
+
+  if (mouthOpen < 0.08 || smile < 0.2) {
+    return 0;
+  }
+
+  return roundRatio(Math.min(1, mouthOpen * 0.8 + smile * 0.175));
 }
 
 function getBounds(points: NormalizedLandmark[]): Bounds {
@@ -200,21 +226,43 @@ function isThumbsUp(hand: NormalizedLandmark[]): boolean {
 }
 
 function isHandNearFace(hand: NormalizedLandmark[], faceBounds: Bounds): boolean {
+  const zone = getMouthChinZone(faceBounds);
+
+  return hand.some((point) => isPointInZone(point, zone));
+}
+
+function isFingerNearMouth(hand: NormalizedLandmark[], faceBounds: Bounds): boolean {
+  const wrist = hand[0];
+  const indexMcp = hand[5];
+  const indexTip = hand[8];
+  if (!wrist || !indexMcp || !indexTip) {
+    return false;
+  }
+
+  const zone = getMouthChinZone(faceBounds);
+  if (!isPointInZone(indexTip, zone) || isRaisedOpenPalm(hand)) {
+    return false;
+  }
+
+  const fingertips = [hand[4], hand[8], hand[12], hand[16], hand[20]].filter(
+    (point): point is NormalizedLandmark => Boolean(point)
+  );
+  const fingertipsInMouthZone = countPointsInZone(fingertips, zone);
+  const indexFingerLength = getDistance(indexTip, indexMcp);
+  const indexLeadsHand = getDistance(indexTip, wrist) > getDistance(indexMcp, wrist);
+
+  return fingertipsInMouthZone <= 2 && indexFingerLength > 0.045 && indexLeadsHand;
+}
+
+function getMouthChinZone(faceBounds: Bounds) {
   const width = faceBounds.right - faceBounds.left;
   const height = faceBounds.bottom - faceBounds.top;
-  const expanded = {
+  return {
     left: faceBounds.left + width * 0.22,
     right: faceBounds.right - width * 0.22,
     top: faceBounds.top + height * 0.56,
     bottom: faceBounds.bottom + height * 0.08
   };
-
-  return hand.some((point) =>
-    point.x >= expanded.left &&
-    point.x <= expanded.right &&
-    point.y >= expanded.top &&
-    point.y <= expanded.bottom
-  );
 }
 
 function isRaisedOpenPalm(hand: NormalizedLandmark[]): boolean {
@@ -358,6 +406,10 @@ function getPalmPoints(hand: NormalizedLandmark[]): NormalizedLandmark[] {
 
 function countPointsInZone(points: NormalizedLandmark[], zone: { left: number; right: number; top: number; bottom: number }): number {
   return points.filter((point) => isPointInZone(point, zone)).length;
+}
+
+function getDistance(a: NormalizedLandmark, b: NormalizedLandmark): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 function roundRatio(value: number): number {

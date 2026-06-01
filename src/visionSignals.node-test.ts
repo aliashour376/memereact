@@ -108,6 +108,20 @@ describe('deriveVisionSignals', () => {
 
     assert.equal(sideResult.hands.handNearFace, false);
     assert.equal(mouthResult.hands.handNearFace, true);
+    assert.equal(mouthResult.hands.fingerNearMouth, false);
+  });
+
+  it('detects thinking only from an index finger near the mouth', () => {
+    const face = createFace();
+    const thinkingHand = createThinkingFingerHand();
+
+    const result = deriveVisionSignals(
+      { landmarks: [thinkingHand] } as never,
+      { faceLandmarks: [face], faceBlendshapes: [{ categories: [] }] } as never
+    );
+
+    assert.equal(result.hands.handNearFace, true);
+    assert.equal(result.hands.fingerNearMouth, true);
   });
 
   it('derives upward head tilt from face landmarks', () => {
@@ -121,6 +135,63 @@ describe('deriveVisionSignals', () => {
     );
 
     assert.ok(result.face.headTiltUp > 0);
+  });
+
+  it('derives tongue-out and smile face signals from blendshapes', () => {
+    const result = deriveVisionSignals(
+      null,
+      {
+        faceLandmarks: [createFace()],
+        faceBlendshapes: [{
+          categories: [
+            { categoryName: 'tongueOut', score: 0.7 },
+            { categoryName: 'mouthSmileLeft', score: 0.5 },
+            { categoryName: 'mouthSmileRight', score: 0.7 }
+          ]
+        }]
+      } as never
+    );
+
+    assert.equal(result.face.tongueOut, 0.7);
+    assert.equal(result.face.smile, 0.6);
+  });
+
+  it('derives a tongue cue from an open smiling mouth when direct tongue data is unavailable', () => {
+    const result = deriveVisionSignals(
+      null,
+      {
+        faceLandmarks: [createFace()],
+        faceBlendshapes: [{
+          categories: [
+            { categoryName: 'jawOpen', score: 0.55 },
+            { categoryName: 'mouthSmileLeft', score: 0.35 },
+            { categoryName: 'mouthSmileRight', score: 0.45 }
+          ]
+        }]
+      } as never
+    );
+
+    assert.equal(result.face.tongueOut, 0.51);
+    assert.equal(result.face.smile, 0.4);
+  });
+
+  it('does not derive a tongue cue from smile alone', () => {
+    const result = deriveVisionSignals(
+      null,
+      {
+        faceLandmarks: [createFace()],
+        faceBlendshapes: [{
+          categories: [
+            { categoryName: 'jawOpen', score: 0.02 },
+            { categoryName: 'mouthSmileLeft', score: 0.45 },
+            { categoryName: 'mouthSmileRight', score: 0.55 }
+          ]
+        }]
+      } as never
+    );
+
+    assert.equal(result.face.tongueOut, 0);
+    assert.equal(result.face.smile, 0.5);
   });
 });
 
@@ -142,4 +213,21 @@ function createPalmCluster(centerX: number, centerY: number) {
     y: centerY + (Math.floor(index / 3) % 3) * 0.01,
     z: 0
   }));
+}
+
+function createThinkingFingerHand() {
+  const hand = Array.from({ length: 21 }, () => ({ x: 0.62, y: 0.76, z: 0 }));
+
+  hand[0] = { x: 0.62, y: 0.78, z: 0 };
+  hand[5] = { x: 0.58, y: 0.73, z: 0 };
+  hand[6] = { x: 0.55, y: 0.7, z: 0 };
+  hand[7] = { x: 0.52, y: 0.67, z: 0 };
+  hand[8] = { x: 0.5, y: 0.64, z: 0 };
+
+  hand[9] = { x: 0.61, y: 0.75, z: 0 };
+  hand[12] = { x: 0.63, y: 0.77, z: 0 };
+  hand[16] = { x: 0.65, y: 0.78, z: 0 };
+  hand[20] = { x: 0.67, y: 0.78, z: 0 };
+
+  return hand;
 }

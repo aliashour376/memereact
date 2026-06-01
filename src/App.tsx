@@ -23,7 +23,7 @@ const categoryLabels: Record<MemeCategory, string> = {
   'we-are-cooked': 'We are cooked',
   'ah-hell-nah': 'Ah hell nah',
   thinking: 'Thinking',
-  lmao: 'Lmao'
+  happy: 'Happy'
 };
 
 const neutralNormalizedSignals: NormalizedSignals = {
@@ -38,7 +38,9 @@ const neutralNormalizedSignals: NormalizedSignals = {
     faceScaleRatio: 0,
     mouthFrownDelta: 0,
     lookUpDelta: 0,
-    headTiltUpDelta: 0
+    headTiltUpDelta: 0,
+    tongueOutDelta: 0,
+    smileDelta: 0
   }
 };
 
@@ -171,9 +173,6 @@ export function App() {
           const nextNormalizedSignals = normalizeSignals(nextRawSignals, currentBaseline);
           const nextCandidates = evaluateReactionRules(nextNormalizedSignals);
           const invalidatedCategories = new Set<MemeCategory>();
-          if (nextNormalizedSignals.hands.handCount > 0) {
-            invalidatedCategories.add('lmao');
-          }
           const nextReactionState = controllerRef.current.update(nextCandidates, timestamp, invalidatedCategories);
 
           setNormalizedSignals(nextNormalizedSignals);
@@ -301,6 +300,7 @@ export function App() {
                 <Metric label="Hands" value={rawSignals.hands.handCount.toString()} />
                 <Metric label="Thumbs" value={rawSignals.hands.thumbsUp ? 'yes' : 'no'} />
                 <Metric label="Near face" value={rawSignals.hands.handNearFace ? 'yes' : 'no'} />
+                <Metric label="Finger mouth" value={rawSignals.hands.fingerNearMouth ? 'yes' : 'no'} />
                 <Metric label="Open palms" value={rawSignals.hands.raisedOpenPalms.toString()} />
                 <Metric label="Thumb palms" value={rawSignals.hands.raisedHandsWithThumbs.toString()} />
                 <Metric label="On head" value={rawSignals.hands.handsOnHead.toString()} />
@@ -318,6 +318,8 @@ export function App() {
                 <Metric label="Frown" value={rawSignals.face.mouthFrown.toFixed(2)} />
                 <Metric label="Look up" value={rawSignals.face.lookUp.toFixed(2)} />
                 <Metric label="Head up" value={rawSignals.face.headTiltUp.toFixed(2)} />
+                <Metric label="Tongue" value={rawSignals.face.tongueOut.toFixed(2)} />
+                <Metric label="Smile" value={rawSignals.face.smile.toFixed(2)} />
                 <Metric label="Mouth d" value={normalizedSignals.face.mouthOpenDelta.toFixed(2)} />
                 <Metric label="Eyes d" value={normalizedSignals.face.eyeOpennessDelta.toFixed(2)} />
                 <Metric label="Brow d" value={normalizedSignals.face.browFurrowDelta.toFixed(2)} />
@@ -325,6 +327,8 @@ export function App() {
                 <Metric label="Frown d" value={normalizedSignals.face.mouthFrownDelta.toFixed(2)} />
                 <Metric label="Look up d" value={normalizedSignals.face.lookUpDelta.toFixed(2)} />
                 <Metric label="Head up d" value={normalizedSignals.face.headTiltUpDelta.toFixed(2)} />
+                <Metric label="Tongue d" value={normalizedSignals.face.tongueOutDelta.toFixed(2)} />
+                <Metric label="Smile d" value={normalizedSignals.face.smileDelta.toFixed(2)} />
               </div>
 
               <div className="candidate-list">
