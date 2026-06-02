@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ChevronDown, ChevronUp, Eye, Sparkles } from 'lucide-react';
+import { Camera, ChevronDown, ChevronUp, Download, Eye, Mic, MicOff, Sparkles, Trash2, Video, VideoOff } from 'lucide-react';
 import {
   createCalibrationSession,
   normalizeSignals,
@@ -15,6 +15,13 @@ import { createReactionController, type ActiveReaction } from './reactionState.t
 import { createVisionService, type VisionService } from './visionService.ts';
 import { loadWithTimeout } from './visionLoader.ts';
 import { deriveVisionSignals, neutralSignals, type VisionSignals } from './visionSignals.ts';
+import {
+  clipCanvasHeight,
+  clipCanvasWidth,
+  formatBytes,
+  formatClipTimestamp,
+  useReactionClipRecorder
+} from './useReactionClipRecorder.ts';
 
 type AppStatus = 'idle' | 'requesting-camera' | 'loading-models' | 'calibrating' | 'live' | 'error';
 
@@ -68,6 +75,27 @@ export function App() {
   const [activeReaction, setActiveReaction] = useState<ActiveReaction | null>(null);
   const [displayedMeme, setDisplayedMeme] = useState<MemeAsset | null>(null);
   const [developerOpen, setDeveloperOpen] = useState(false);
+  const {
+    clipCanvasRef,
+    reactionClipsEnabled,
+    microphoneEnabled,
+    clipLifecycle,
+    clipPreview,
+    clipMessage,
+    toggleReactionClips,
+    toggleMicrophone,
+    discardClip,
+    prepareNextClip,
+    downloadClip,
+    resetClipSession,
+    stopRecording,
+    stopMicrophoneStream
+  } = useReactionClipRecorder({
+    activeReaction,
+    displayedMeme,
+    categoryLabels,
+    videoRef
+  });
 
   const statusLabel = useMemo(() => {
     if (status === 'requesting-camera') return 'Requesting camera';
@@ -84,8 +112,10 @@ export function App() {
         cancelAnimationFrame(frameRef.current);
       }
 
+      stopRecording();
       serviceRef.current?.close();
       streamRef.current?.getTracks().forEach((track) => track.stop());
+      stopMicrophoneStream();
     };
   }, []);
 
@@ -217,6 +247,7 @@ export function App() {
     setCandidates([]);
     setActiveReaction(null);
     setDisplayedMeme(null);
+    resetClipSession();
   }
 
   return (
@@ -233,40 +264,136 @@ export function App() {
           </div>
         </header>
 
-        <section className="live-grid">
+        <section className="live-grid has-recording-dock">
+          <aside className="recording-dock" aria-label="Recording controls">
+            <div className="panel-head">
+              <Video size={18} />
+              <span>Recording</span>
+            </div>
+            <div className="recording-drawer">
+              <div className="clip-panel">
+                <div className="clip-toggle-row">
+                  <button
+                    className={`mode-toggle ${reactionClipsEnabled ? 'is-on' : ''}`}
+                    type="button"
+                    role="switch"
+                    aria-checked={reactionClipsEnabled}
+                    onClick={toggleReactionClips}
+                  >
+                    {reactionClipsEnabled ? <Video size={17} /> : <VideoOff size={17} />}
+                    Reaction clips: {reactionClipsEnabled ? 'On' : 'Off'}
+                  </button>
+                  {reactionClipsEnabled && (
+                    <button
+                      className={`mode-toggle ${microphoneEnabled ? 'is-on' : ''}`}
+                      type="button"
+                      role="switch"
+                      aria-checked={microphoneEnabled}
+                      onClick={toggleMicrophone}
+                    >
+                      {microphoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}
+                      Microphone: {microphoneEnabled ? 'On' : 'Off'}
+                    </button>
+                  )}
+                </div>
+                <div className={`clip-state clip-state-${clipLifecycle}`}>
+                  {clipLifecycle === 'recording' ? (
+                    <>
+                      <span className="recording-dot" />
+                      {microphoneEnabled ? 'Recording video + mic' : 'Recording video'}
+                    </>
+                  ) : clipLifecycle === 'preview-ready' && clipPreview ? (
+                    <span>Latest clip ready</span>
+                  ) : reactionClipsEnabled ? (
+                    <span>Reaction clips armed</span>
+                  ) : (
+                    <span>Reaction clips off</span>
+                  )}
+                </div>
+                {clipMessage && <p className="clip-message">{clipMessage}</p>}
+                <div className={`clip-preview ${clipPreview ? 'has-clip' : ''}`}>
+                  {clipPreview ? (
+                    <>
+                      <div className="clip-preview-head">
+                        <div>
+                          <strong>{clipPreview.label}</strong>
+                          <span>{formatClipTimestamp(clipPreview.createdAt)} · 3 sec · {clipPreview.includesAudio ? 'video + mic' : 'video only'}</span>
+                        </div>
+                        <span>{formatBytes(clipPreview.blob.size)}</span>
+                      </div>
+                      <video src={clipPreview.url} controls playsInline />
+                      <div className="clip-actions">
+                        <button type="button" onClick={downloadClip}>
+                          <Download size={16} />
+                          Download
+                        </button>
+                        <button type="button" onClick={prepareNextClip}>
+                          <Video size={16} />
+                          Record next
+                        </button>
+                        <button type="button" onClick={discardClip}>
+                          <Trash2 size={16} />
+                          Discard
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="clip-preview-empty">No clip yet</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+
           <div className="camera-panel">
             <video ref={videoRef} className="camera-feed" playsInline muted />
+            <canvas
+              ref={clipCanvasRef}
+              className="clip-canvas"
+              width={clipCanvasWidth}
+              height={clipCanvasHeight}
+              aria-hidden="true"
+            />
             <div className="camera-overlay">
               <div className="reticle" />
               <div className="camera-label">
                 <Camera size={16} />
                 Camera
               </div>
+              {clipLifecycle === 'recording' && (
+                <div className="recording-badge" role="status">
+                  <span />
+                  {microphoneEnabled ? 'Recording video + mic' : 'Recording video'}
+                </div>
+              )}
             </div>
 
             {status !== 'live' && (
               <div className="start-layer">
-                {status === 'calibrating' ? (
-                  <div className="calibration-meter" aria-label="Calibration progress">
-                    <span style={{ width: `${Math.round(calibrationProgress * 100)}%` }} />
-                  </div>
-                ) : status === 'requesting-camera' || status === 'loading-models' ? (
-                  <div className="loading-state" role="status">
-                    <span />
-                    {status === 'requesting-camera' ? 'Requesting camera' : 'Loading vision'}
-                  </div>
-                ) : (
-                  <button
-                    className="primary-button"
-                    onClick={startExperience}
-                  >
-                    <Eye size={18} />
-                    {status === 'error' ? 'Retry' : 'Start'}
-                  </button>
-                )}
-                {error && <p className="error-text">{error}</p>}
+                <div className="start-card">
+                  {status === 'calibrating' ? (
+                    <div className="calibration-meter" aria-label="Calibration progress">
+                      <span style={{ width: `${Math.round(calibrationProgress * 100)}%` }} />
+                    </div>
+                  ) : status === 'requesting-camera' || status === 'loading-models' ? (
+                    <div className="loading-state" role="status">
+                      <span />
+                      {status === 'requesting-camera' ? 'Requesting camera' : 'Loading vision'}
+                    </div>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      onClick={startExperience}
+                    >
+                      <Eye size={18} />
+                      {status === 'error' ? 'Retry' : 'Start'}
+                    </button>
+                  )}
+                  {error && <p className="error-text">{error}</p>}
+                </div>
               </div>
             )}
+
           </div>
 
           <aside className="meme-panel">
@@ -286,6 +413,10 @@ export function App() {
               <span>{activeReaction ? activeReaction.reason : baseline ? 'Listening' : 'Not calibrated'}</span>
             </div>
           </aside>
+          <p className="privacy-strip">
+            Camera preview stays on this device. When reaction clips are enabled, a locked reaction saves one short local clip. Nothing is uploaded.
+            {microphoneEnabled ? ' Microphone audio is included only while Microphone is On.' : ''}
+          </p>
         </section>
 
         <section className="developer-panel">

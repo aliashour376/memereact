@@ -43,14 +43,14 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  padding: 30px;
+  padding: 22px;
   display: grid;
   align-items: center;
 }
 
 .workspace {
   position: relative;
-  width: min(1240px, 100%);
+  width: min(1640px, 100%);
   margin: 0 auto;
   padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -133,6 +133,10 @@ h1 {
   align-items: stretch;
 }
 
+.live-grid.has-recording-dock {
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1.4fr) minmax(360px, 0.7fr);
+}
+
 .camera-panel,
 .meme-panel,
 .developer-panel {
@@ -172,6 +176,14 @@ h1 {
   background: #050607;
 }
 
+.clip-canvas {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .camera-overlay {
   position: absolute;
   inset: 0;
@@ -208,13 +220,47 @@ h1 {
 
 .camera-label {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
+  left: 34px;
+  bottom: 34px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
   color: #f6f2ea;
   font-size: 0.88rem;
+  font-weight: 800;
+  background: rgba(5, 6, 7, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.recording-badge {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 107, 107, 0.42);
+  border-radius: 999px;
+  color: #fffdf8;
+  background: rgba(102, 22, 22, 0.72);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.recording-badge span,
+.recording-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #ff6b6b;
+  box-shadow: 0 0 18px rgba(255, 107, 107, 0.82);
+  animation: pulse-dot 900ms ease-in-out infinite alternate;
 }
 
 .start-layer {
@@ -227,8 +273,40 @@ h1 {
   background: rgba(5, 6, 7, 0.58);
 }
 
+.recording-dock {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 560px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(10, 12, 15, 0.72);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(18px);
+}
+
+.recording-drawer {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.start-card {
+  width: min(520px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
 .primary-button,
 .preview-row button,
+.clip-actions button,
 .developer-toggle {
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: #08090b;
@@ -260,6 +338,48 @@ h1 {
 .primary-button:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+.privacy-note,
+.clip-help,
+.clip-message {
+  margin: 0;
+  color: #cfc7bd;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.privacy-note {
+  max-width: 410px;
+}
+
+.clip-toggle-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mode-toggle {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: #f6f2ea;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.mode-toggle.is-on {
+  border-color: rgba(125, 240, 177, 0.42);
+  color: #082116;
+  background: #7df0b1;
 }
 
 .calibration-meter {
@@ -350,7 +470,7 @@ h1 {
 .meme-frame img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   animation: meme-pop 380ms ease both;
 }
 
@@ -378,6 +498,146 @@ h1 {
 .reaction-meta span {
   color: #bcb4aa;
   font-size: 0.92rem;
+}
+
+.clip-panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-top: 14px;
+}
+
+.clip-panel .clip-toggle-row {
+  justify-content: flex-start;
+}
+
+.clip-panel .clip-help,
+.clip-panel .clip-message {
+  text-align: left;
+}
+
+.clip-state {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #d9d4cc;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.clip-state-recording {
+  border-color: rgba(255, 107, 107, 0.34);
+  color: #fffdf8;
+  background: rgba(102, 22, 22, 0.5);
+}
+
+.clip-state-preview-ready {
+  border-color: rgba(125, 240, 177, 0.32);
+  color: #d9ffeb;
+  background: rgba(15, 67, 43, 0.5);
+}
+
+.clip-preview {
+  min-height: 322px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-top: 4px;
+}
+
+.clip-preview-empty {
+  min-height: 232px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #9f988f;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.clip-preview-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.clip-preview-head div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.clip-preview-head strong {
+  color: #fffdf8;
+  font-size: 0.98rem;
+}
+
+.clip-preview-head span {
+  color: #a9a39a;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.clip-preview-head div span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clip-preview video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: #050607;
+  object-fit: cover;
+}
+
+.clip-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.clip-actions button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.clip-actions button:first-child {
+  border-color: rgba(125, 240, 177, 0.42);
+  color: #082116;
+  background: #7df0b1;
+}
+
+.clip-actions button:nth-child(2) {
+  color: #f6f2ea;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.clip-actions button:last-child {
+  border-color: rgba(255, 107, 107, 0.34);
+  color: #ffd8d8;
+  background: rgba(102, 22, 22, 0.3);
 }
 
 .developer-panel {
@@ -462,6 +722,17 @@ h1 {
   cursor: pointer;
 }
 
+.privacy-strip {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  margin: -4px 0 0;
+  color: #a9a39a;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 @keyframes meme-pop {
   from {
     opacity: 0;
@@ -481,6 +752,17 @@ h1 {
   }
 }
 
+@keyframes pulse-dot {
+  from {
+    opacity: 0.52;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes ambient-shift {
   0% {
     background-position: 0% 0%, 100% 0%, 100% 100%, 0% 0%;
@@ -490,7 +772,7 @@ h1 {
   }
 }
 
-@media (max-width: 860px) {
+  @media (max-width: 860px) {
   .app-shell {
     padding: 16px;
   }
@@ -508,6 +790,15 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .live-grid.has-recording-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .privacy-strip {
+    grid-column: 1;
+    margin-top: -2px;
+  }
+
   .camera-panel,
   .camera-feed,
   .meme-panel {
@@ -516,5 +807,22 @@ h1 {
 
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recording-dock {
+    min-height: auto;
+  }
+
+  .recording-drawer {
+    width: 100%;
+  }
+
+  .clip-panel .clip-toggle-row {
+    flex-direction: column;
+  }
+
+  .mode-toggle,
+  .clip-actions button {
+    width: 100%;
   }
 }
