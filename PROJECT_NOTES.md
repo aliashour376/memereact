@@ -63,6 +63,7 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
   - clips use a hidden canvas export so buttons, Developer panel, debug UI, and status UI are excluded
   - preview, download, and discard controls are implemented
   - no backend, upload, account, or gallery was added
+  - V2 Reaction Clip Booth is complete and live-verified as of 2026-06-03
 - Durable docs:
   - `docs/superpowers/specs/2026-06-01-reaction-clip-booth-v2-design.md`
   - `docs/superpowers/plans/2026-06-01-reaction-clip-booth-v2.md`
@@ -214,7 +215,7 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
 - `ah-hell-nah`: user reported it is working.
 - `thinking`: should now require the visible finger cue instead of any hand near the face.
 - `happy`: expected to trigger from tongue out; smile should increase confidence but should not trigger by itself.
-- Reaction clips need live browser validation:
+- Reaction clips passed live browser validation on 2026-06-03:
   - clips should not record while `Reaction clips` is off
   - clips should record once after a new reaction locks while `Reaction clips` is on
   - the red recording indicator should appear for roughly 3 seconds
@@ -319,7 +320,8 @@ If either pose still misfires, record:
 - Latest V2 planning update: include audio only when a separate microphone toggle is explicitly enabled; microphone defaults to off.
 - Latest V2 export decision: use Overlay Export, not side-by-side export.
 - Overlay sizing question is no longer blocking; current implementation uses adaptive dramatic/sticker-style overlay export.
-- Next useful step: run the app in a browser and manually validate the Reaction Clip Booth flow with the webcam.
+- V2 Reaction Clip Booth is complete and live-verified; do not spend more time on clip validation unless a new bug appears.
+- Next meaningful product step: start planning the separate pose-match guide mode, or handle mobile layout later when the user asks for it.
 - All current meme photos are working well.
 - The fifth category is `happy`; the old deadpan fifth reaction has been retired.
 - `thinking` now depends on `Finger mouth = yes`, not merely `Near face = yes`.

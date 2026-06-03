@@ -90,16 +90,16 @@ npm.cmd test
 npm.cmd run build
 ```
 
-- [ ] Manually verify clips do not record when toggle is off.
-- [ ] Manually verify clips auto-record after reaction lock when toggle is on.
-- [ ] Manually verify the recording indicator appears during capture.
-- [ ] Manually verify preview appears after capture.
-- [ ] Manually verify discard removes preview.
-- [ ] Manually verify downloaded WebM has no audio when microphone is off, and includes mic audio only when explicitly enabled.
-- [ ] Manually verify camera and meme display still work without recording enabled.
+- [x] Manually verify clips do not record when toggle is off.
+- [x] Manually verify clips auto-record after reaction lock when toggle is on.
+- [x] Manually verify the recording indicator appears during capture.
+- [x] Manually verify preview appears after capture.
+- [x] Manually verify discard removes preview.
+- [x] Manually verify downloaded WebM has no audio when microphone is off, and includes mic audio only when explicitly enabled.
+- [x] Manually verify camera and meme display still work without recording enabled.
 
 ## Self-Review
 
-- Privacy is explicit: opt-in, local-only, no audio, visible recording state.
+- Privacy is explicit: opt-in, local-only, audio only through the separate microphone toggle, visible recording state.
 - Scope is V2-sized: no backend, no accounts, no upload, no gallery.
 - The feature is meaningful enough for V2 while preserving the existing local meme/detection foundation.
