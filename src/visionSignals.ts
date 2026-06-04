@@ -18,6 +18,8 @@ export interface HandSignals {
   palmCenterYRatio: number[];
   handHeightRatio: number[];
   raisedHandsWithThumbs: number;
+  palmsTogetherNearFace: boolean;
+  fingerGunAtCamera: boolean;
 }
 
 export interface FaceSignals {
@@ -29,9 +31,12 @@ export interface FaceSignals {
   faceScale: number;
   mouthFrown: number;
   lookUp: number;
+  lookDown: number;
   tongueOut: number;
   smile: number;
   headTiltUp: number;
+  headTiltDown: number;
+  headTiltSide: number;
 }
 
 export interface VisionSignals {
@@ -53,7 +58,9 @@ export const neutralSignals: VisionSignals = {
     palmCenterXRatio: [],
     palmCenterYRatio: [],
     handHeightRatio: [],
-    raisedHandsWithThumbs: 0
+    raisedHandsWithThumbs: 0,
+    palmsTogetherNearFace: false,
+    fingerGunAtCamera: false
   },
   face: {
     facePresent: false,
@@ -64,9 +71,12 @@ export const neutralSignals: VisionSignals = {
     faceScale: 0,
     mouthFrown: 0,
     lookUp: 0,
+    lookDown: 0,
     tongueOut: 0,
     smile: 0,
-    headTiltUp: 0
+    headTiltUp: 0,
+    headTiltDown: 0,
+    headTiltSide: 0
   }
 };
 
@@ -109,12 +119,18 @@ export function deriveVisionSignals(
     getBlendshape(blendshapes, 'eyeLookUpLeft'),
     getBlendshape(blendshapes, 'eyeLookUpRight')
   );
+  const lookDown = average(
+    getBlendshape(blendshapes, 'eyeLookDownLeft'),
+    getBlendshape(blendshapes, 'eyeLookDownRight')
+  );
   const smile = average(
     getBlendshape(blendshapes, 'mouthSmileLeft'),
     getBlendshape(blendshapes, 'mouthSmileRight')
   );
   const tongueOut = deriveTongueOut(getBlendshape(blendshapes, 'tongueOut'), mouthOpen, smile);
   const headTiltUp = faceLandmarks.length > 0 ? getHeadTiltUp(faceLandmarks) : 0;
+  const headTiltDown = faceLandmarks.length > 0 ? getHeadTiltDown(faceLandmarks) : 0;
+  const headTiltSide = faceLandmarks.length > 0 ? getHeadTiltSide(faceLandmarks) : 0;
 
   const hands = handResult?.landmarks ?? [];
   const sideHeadPalmContacts = faceBounds ? hands.filter((hand) => isPalmTouchingSideOfHead(hand, faceBounds)).length : 0;
@@ -140,7 +156,9 @@ export function deriveVisionSignals(
       palmCenterXRatio: contactDiagnostics.map((diagnostic) => diagnostic.palmCenterXRatio),
       palmCenterYRatio: contactDiagnostics.map((diagnostic) => diagnostic.palmCenterYRatio),
       handHeightRatio: contactDiagnostics.map((diagnostic) => diagnostic.handHeightRatio),
-      raisedHandsWithThumbs: hands.filter((hand) => isRaisedOpenPalm(hand) && hasExtendedThumb(hand)).length
+      raisedHandsWithThumbs: hands.filter((hand) => isRaisedOpenPalm(hand) && hasExtendedThumb(hand)).length,
+      palmsTogetherNearFace: Boolean(faceBounds && arePalmsTogetherNearFace(hands, faceBounds)),
+      fingerGunAtCamera: hands.some(isFingerGunAtCamera)
     },
     face: {
       facePresent: faceLandmarks.length > 0,
@@ -151,9 +169,12 @@ export function deriveVisionSignals(
       faceScale: faceBounds?.area ?? 0,
       mouthFrown,
       lookUp,
+      lookDown,
       tongueOut,
       smile,
-      headTiltUp
+      headTiltUp,
+      headTiltDown,
+      headTiltSide
     }
   };
 }
@@ -293,6 +314,32 @@ function hasExtendedThumb(hand: NormalizedLandmark[]): boolean {
   return thumbSpread && thumbLifted;
 }
 
+function isFingerGunAtCamera(hand: NormalizedLandmark[]): boolean {
+  const wrist = hand[0];
+  const thumbIp = hand[3];
+  const thumbTip = hand[4];
+  const indexMcp = hand[5];
+  const indexTip = hand[8];
+  const middlePip = hand[10];
+  const middleTip = hand[12];
+  const ringPip = hand[14];
+  const ringTip = hand[16];
+  const pinkyPip = hand[18];
+  const pinkyTip = hand[20];
+
+  if (!wrist || !thumbIp || !thumbTip || !indexMcp || !indexTip || !middlePip || !middleTip || !ringPip || !ringTip || !pinkyPip || !pinkyTip) {
+    return false;
+  }
+
+  const indexForeshortened = getDistance(indexTip, indexMcp) <= 0.12;
+  const indexCloserToCamera = indexTip.z < indexMcp.z - 0.04 || indexTip.z < wrist.z - 0.04;
+  const thumbUp = thumbTip.y < thumbIp.y - 0.025 || thumbTip.y < wrist.y - 0.08;
+  const foldedFingers = [middleTip.y > middlePip.y - 0.005, ringTip.y > ringPip.y - 0.005, pinkyTip.y > pinkyPip.y - 0.005]
+    .filter(Boolean).length;
+
+  return indexForeshortened && indexCloserToCamera && thumbUp && foldedFingers >= 2 && !isRaisedOpenPalm(hand);
+}
+
 function isHandOnHead(hand: NormalizedLandmark[], faceBounds: Bounds): boolean {
   const wrist = hand[0];
   if (!wrist) {
@@ -398,6 +445,56 @@ function getHeadContactDiagnostics(hand: NormalizedLandmark[], faceBounds: Bound
   };
 }
 
+function arePalmsTogetherNearFace(hands: NormalizedLandmark[][], faceBounds: Bounds): boolean {
+  const centers = hands
+    .map((hand) => getPalmCenter(hand))
+    .filter((center): center is { x: number; y: number } => Boolean(center));
+
+  if (centers.length < 2) {
+    return false;
+  }
+
+  const width = faceBounds.right - faceBounds.left;
+  const height = faceBounds.bottom - faceBounds.top;
+
+  for (let index = 0; index < centers.length; index += 1) {
+    for (let otherIndex = index + 1; otherIndex < centers.length; otherIndex += 1) {
+      const first = centers[index];
+      const second = centers[otherIndex];
+      const midpoint = {
+        x: (first.x + second.x) / 2,
+        y: (first.y + second.y) / 2
+      };
+      const nearFace =
+        midpoint.x >= faceBounds.left - width * 0.15 &&
+        midpoint.x <= faceBounds.right + width * 0.15 &&
+        midpoint.y >= faceBounds.top + height * 0.28 &&
+        midpoint.y <= faceBounds.bottom + height * 0.25;
+      const closeTogether =
+        Math.abs(first.x - second.x) <= width * 0.28 &&
+        Math.abs(first.y - second.y) <= height * 0.24;
+
+      if (nearFace && closeTogether) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getPalmCenter(hand: NormalizedLandmark[]): { x: number; y: number } | null {
+  const palmPoints = getPalmPoints(hand);
+  if (palmPoints.length < 5) {
+    return null;
+  }
+
+  return {
+    x: average(...palmPoints.map((point) => point.x)),
+    y: average(...palmPoints.map((point) => point.y))
+  };
+}
+
 function getPalmPoints(hand: NormalizedLandmark[]): NormalizedLandmark[] {
   return [hand[0], hand[5], hand[9], hand[13], hand[17]].filter(
     (point): point is NormalizedLandmark => Boolean(point)
@@ -434,4 +531,28 @@ function getHeadTiltUp(points: NormalizedLandmark[]): number {
   const faceHeight = Math.max(0.0001, chin.y - forehead.y);
   const noseToChinRatio = (chin.y - nose.y) / faceHeight;
   return Math.max(0, noseToChinRatio - 0.45);
+}
+
+function getHeadTiltDown(points: NormalizedLandmark[]): number {
+  const nose = points[1];
+  const chin = points[152];
+  const forehead = points[10];
+  if (!nose || !chin || !forehead) {
+    return 0;
+  }
+
+  const faceHeight = Math.max(0.0001, chin.y - forehead.y);
+  const noseToChinRatio = (chin.y - nose.y) / faceHeight;
+  return Math.max(0, 0.45 - noseToChinRatio);
+}
+
+function getHeadTiltSide(points: NormalizedLandmark[]): number {
+  const leftEye = points[33];
+  const rightEye = points[263];
+  if (!leftEye || !rightEye) {
+    return 0;
+  }
+
+  const eyeDistance = Math.max(0.0001, getDistance(leftEye, rightEye));
+  return roundRatio(Math.abs(leftEye.y - rightEye.y) / eyeDistance);
 }

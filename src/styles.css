@@ -1,4 +1,5 @@
 :root {
+  --main-panel-height: 560px;
   color: #f6f2ea;
   background: #08090b;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -198,6 +199,7 @@ h1 {
 
 .camera-panel {
   position: relative;
+  height: var(--main-panel-height);
   min-height: 560px;
   overflow: hidden;
   border-radius: 8px;
@@ -217,7 +219,7 @@ h1 {
 .camera-feed {
   width: 100%;
   height: 100%;
-  min-height: 560px;
+  min-height: 0;
   display: block;
   object-fit: cover;
   transform: scaleX(-1);
@@ -328,6 +330,7 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  height: var(--main-panel-height);
   min-height: 560px;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -351,6 +354,7 @@ h1 {
 .recording-drawer {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   pointer-events: auto;
 }
@@ -486,6 +490,7 @@ h1 {
   padding: 18px;
   display: flex;
   flex-direction: column;
+  height: var(--main-panel-height);
   min-height: 560px;
 }
 
@@ -701,14 +706,59 @@ h1 {
 .guide-panel {
   position: relative;
   z-index: 1;
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 14px;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-top: 14px;
+  padding-right: 4px;
+  scrollbar-color: rgba(255, 202, 107, 0.62) rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+}
+
+.guide-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.guide-panel::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.guide-panel::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(10, 12, 15, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 202, 107, 0.72);
 }
 
 .guide-targets {
+  max-height: 248px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 8px;
+  padding-right: 4px;
+  scrollbar-color: rgba(255, 202, 107, 0.62) rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+}
+
+.guide-targets::-webkit-scrollbar {
+  width: 8px;
+}
+
+.guide-targets::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.guide-targets::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(10, 12, 15, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 202, 107, 0.72);
 }
 
 .guide-targets button {
@@ -871,6 +921,41 @@ h1 {
   background: #7df0b1;
 }
 
+.pose-capture-badge {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 202, 107, 0.46);
+  border-radius: 999px;
+  color: #17110f;
+  background: #ffca6b;
+  font-size: 0.86rem;
+  font-weight: 900;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34);
+}
+
+.pose-capture-badge span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.pose-capture-badge.is-recording {
+  border-color: rgba(125, 240, 177, 0.52);
+  color: #082116;
+  background: #7df0b1;
+}
+
+.pose-capture-badge.is-recording span {
+  animation: pulse-dot 900ms ease-in-out infinite alternate;
+}
+
 .developer-panel {
   position: relative;
   z-index: 1;
@@ -935,6 +1020,174 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.pose-capture-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(125, 240, 177, 0.18);
+  border-radius: 8px;
+  background: rgba(125, 240, 177, 0.055);
+}
+
+.pose-capture-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #7df0b1;
+}
+
+.pose-capture-head div {
+  display: grid;
+  gap: 2px;
+}
+
+.pose-capture-head span,
+.pose-capture-controls label,
+.pose-capture-message,
+.pose-capture-stats,
+.pose-capture-scores span {
+  color: #a9a39a;
+  font-size: 0.8rem;
+}
+
+.pose-capture-head strong {
+  color: #fffdf8;
+  font-size: 1rem;
+}
+
+.pose-capture-controls,
+.pose-capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pose-capture-controls label {
+  display: grid;
+  gap: 4px;
+  min-width: 200px;
+  flex: 1;
+  font-weight: 800;
+}
+
+.pose-capture-controls select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #f6f2ea;
+  background: #12161c;
+  font: inherit;
+  font-weight: 800;
+}
+
+.pose-capture-controls button,
+.pose-capture-actions button,
+.pose-capture-actions label {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #f6f2ea;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.pose-capture-controls button:first-of-type {
+  border-color: rgba(125, 240, 177, 0.42);
+  color: #082116;
+  background: #7df0b1;
+}
+
+.pose-capture-controls button:nth-of-type(2) {
+  border-color: rgba(255, 202, 107, 0.42);
+  color: #17110f;
+  background: #ffca6b;
+}
+
+.pose-capture-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.pose-capture-actions input {
+  display: none;
+}
+
+.pose-capture-actions button:last-child {
+  border-color: rgba(255, 107, 107, 0.34);
+  color: #ffd8d8;
+  background: rgba(102, 22, 22, 0.3);
+}
+
+.pose-capture-meter {
+  display: grid;
+  gap: 8px;
+}
+
+.pose-capture-meter div,
+.pose-capture-stats,
+.pose-capture-scores div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pose-capture-meter div span {
+  color: #d9d4cc;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pose-capture-meter div strong,
+.pose-capture-scores strong {
+  color: #fffdf8;
+  font-size: 0.9rem;
+}
+
+.pose-capture-meter > span {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pose-capture-meter > span span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffca6b, #7df0b1);
+}
+
+.pose-capture-stats {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  font-weight: 800;
+}
+
+.pose-capture-scores {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.pose-capture-message {
+  margin: 0;
+  line-height: 1.45;
 }
 
 .preview-row {
@@ -1003,7 +1256,11 @@ h1 {
   }
 }
 
-  @media (max-width: 860px) {
+@media (max-width: 860px) {
+  :root {
+    --main-panel-height: 430px;
+  }
+
   .app-shell {
     padding: 16px;
   }
@@ -1051,7 +1308,8 @@ h1 {
   .camera-panel,
   .camera-feed,
   .meme-panel {
-    min-height: 430px;
+    height: var(--main-panel-height);
+    min-height: var(--main-panel-height);
   }
 
   .metrics-grid {
@@ -1060,7 +1318,8 @@ h1 {
 
   .recording-dock,
   .guide-dock {
-    min-height: auto;
+    height: var(--main-panel-height);
+    min-height: var(--main-panel-height);
   }
 
   .recording-drawer {

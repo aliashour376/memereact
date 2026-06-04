@@ -15,6 +15,14 @@ export interface PoseGuideMatch {
   checks: PoseGuideCheck[];
 }
 
+const capturedOnlyCategories = new Set<MemeCategory>([
+  'lets-larp',
+  'no-idea-cuh',
+  'son',
+  'tf',
+  'zoltraak'
+]);
+
 export function evaluatePoseGuide(signals: NormalizedSignals, category: MemeCategory): PoseGuideMatch {
   const checks = getChecks(signals, category);
   const score = getScore(category, checks);
@@ -68,11 +76,22 @@ function getChecks(signals: NormalizedSignals, category: MemeCategory): PoseGuid
     ];
   }
 
-  const tongue = ramp(signals.face.tongueOutDelta, 0.08, 0.18);
-  return [
-    createCheck('Tongue out', tongue),
-    createCheck('Smile', tongue > 0 ? ramp(signals.face.smileDelta, 0.08, 0.2) : 0)
-  ];
+  if (category === 'happy') {
+    const tongue = ramp(signals.face.tongueOutDelta, 0.08, 0.18);
+    return [
+      createCheck('Tongue out', tongue),
+      createCheck('Smile', tongue > 0 ? ramp(signals.face.smileDelta, 0.08, 0.2) : 0)
+    ];
+  }
+
+  if (capturedOnlyCategories.has(category)) {
+    return [
+      createCheck('Record good examples', 0),
+      createCheck('Record bad examples', 0)
+    ];
+  }
+
+  return [];
 }
 
 function createCheck(label: string, progress: number): PoseGuideCheck {
@@ -152,5 +171,25 @@ const hintCopy: Record<MemeCategory, Record<string, string>> = {
   happy: {
     'Tongue out': 'Stick your tongue out',
     Smile: 'Smile if you can'
+  },
+  'lets-larp': {
+    'Record good examples': 'Record good examples in Developer',
+    'Record bad examples': 'Record bad examples in Developer'
+  },
+  'no-idea-cuh': {
+    'Record good examples': 'Record good examples in Developer',
+    'Record bad examples': 'Record bad examples in Developer'
+  },
+  son: {
+    'Record good examples': 'Record good examples in Developer',
+    'Record bad examples': 'Record bad examples in Developer'
+  },
+  tf: {
+    'Record good examples': 'Record good examples in Developer',
+    'Record bad examples': 'Record bad examples in Developer'
+  },
+  zoltraak: {
+    'Record good examples': 'Record good examples in Developer',
+    'Record bad examples': 'Record bad examples in Developer'
   }
 };

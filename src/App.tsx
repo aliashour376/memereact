@@ -10,7 +10,20 @@ import {
 import { localMemeCatalog } from './generated/memeCatalog.ts';
 import { createLocalMemeSource } from './memeLibrary.ts';
 import { memeCategories, type MemeAsset, type MemeCategory } from './memeTypes.ts';
-import { evaluatePoseGuide } from './poseGuide.ts';
+import {
+  appendPoseCaptureSamples,
+  createEmptyPoseDataset,
+  createPoseCaptureSample,
+  getPoseCaptureCounts,
+  parsePoseCaptureDataset,
+  removePoseCapturesForCategory,
+  scoreAllCapturedPoses,
+  scoreCapturedPose,
+  type PoseCaptureDataset,
+  type PoseCaptureLabel,
+  type PoseCaptureSample
+} from './poseCapture.ts';
+import { evaluatePoseGuide, type PoseGuideCheck } from './poseGuide.ts';
 import { evaluateReactionRules, type ReactionCandidate } from './reactionRules.ts';
 import { createReactionController, type ActiveReaction } from './reactionState.ts';
 import { createVisionService, type VisionService } from './visionService.ts';
@@ -27,12 +40,43 @@ import {
 type AppStatus = 'idle' | 'requesting-camera' | 'loading-models' | 'calibrating' | 'live' | 'error';
 type AppMode = 'react' | 'guide';
 
+interface PoseCaptureRun {
+  category: MemeCategory;
+  label: PoseCaptureLabel;
+  startedAt: number;
+  endsAt: number;
+  lastCapturedAt: number;
+  lastUiUpdatedAt: number;
+  samples: PoseCaptureSample[];
+}
+
+const poseCaptureStorageKey = 'memereact.poseCaptureDataset.v1';
+const poseCapturePrepMs = 3000;
+const poseCaptureDurationMs = 2600;
+const poseCaptureFrameIntervalMs = 90;
+const poseCaptureUiIntervalMs = 100;
+const defaultCapturedPoseCandidateThreshold = 0.62;
+const capturedPoseCandidateThresholds: Partial<Record<MemeCategory, number>> = {
+  'lets-larp': 0.28
+};
+const handRequiredCapturedCategories = new Set<MemeCategory>(['lets-larp', 'no-idea-cuh', 'son']);
+const minimumHandVisiblePercentByCategory: Partial<Record<MemeCategory, number>> = {
+  'lets-larp': 20,
+  'no-idea-cuh': 70,
+  son: 70
+};
+
 const categoryLabels: Record<MemeCategory, string> = {
   'absolute-cinema': 'Absolute cinema',
   'we-are-cooked': 'We are cooked',
   'ah-hell-nah': 'Ah hell nah',
   thinking: 'Thinking',
-  happy: 'Happy'
+  happy: 'Happy',
+  'lets-larp': 'Lets larp',
+  'no-idea-cuh': 'No idea cuh',
+  son: 'Son',
+  tf: 'TF',
+  zoltraak: 'Zoltraak'
 };
 
 const guideStatusLabels = {
@@ -54,7 +98,10 @@ const neutralNormalizedSignals: NormalizedSignals = {
     faceScaleRatio: 0,
     mouthFrownDelta: 0,
     lookUpDelta: 0,
+    lookDownDelta: 0,
     headTiltUpDelta: 0,
+    headTiltDownDelta: 0,
+    headTiltSideDelta: 0,
     tongueOutDelta: 0,
     smileDelta: 0
   }
@@ -73,6 +120,8 @@ export function App() {
     cooldownMs: 260
   }));
   const memeSourceRef = useRef(createLocalMemeSource(localMemeCatalog));
+  const poseDatasetRef = useRef<PoseCaptureDataset>(loadPoseCaptureDataset());
+  const poseCaptureRunRef = useRef<PoseCaptureRun | null>(null);
 
   const [status, setStatus] = useState<AppStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +136,10 @@ export function App() {
   const [guideTarget, setGuideTarget] = useState<MemeCategory>('absolute-cinema');
   const [guideMeme, setGuideMeme] = useState<MemeAsset | null>(null);
   const [developerOpen, setDeveloperOpen] = useState(false);
+  const [poseDataset, setPoseDataset] = useState<PoseCaptureDataset>(() => poseDatasetRef.current);
+  const [poseCaptureTarget, setPoseCaptureTarget] = useState<MemeCategory>('lets-larp');
+  const [poseCaptureRun, setPoseCaptureRun] = useState<PoseCaptureRun | null>(null);
+  const [poseCaptureMessage, setPoseCaptureMessage] = useState('Capture good and bad examples for hard poses.');
   const recordableReaction = appMode === 'react' ? activeReaction : null;
   const {
     clipCanvasRef,
@@ -114,7 +167,33 @@ export function App() {
     () => evaluatePoseGuide(normalizedSignals, guideTarget),
     [guideTarget, normalizedSignals]
   );
+  const visibleGuideChecks = useMemo(
+    () => getVisibleGuideChecks(guideMatch.checks),
+    [guideMatch.checks]
+  );
   const panelMeme = appMode === 'guide' ? guideMeme : displayedMeme;
+  const poseCaptureCounts = useMemo(
+    () => getPoseCaptureCounts(poseDataset, poseCaptureTarget),
+    [poseDataset, poseCaptureTarget]
+  );
+  const capturedPoseScores = useMemo(
+    () => scoreAllCapturedPoses(poseDataset, normalizedSignals),
+    [normalizedSignals, poseDataset]
+  );
+  const selectedCapturedPoseScore = useMemo(
+    () => scoreCapturedPose(poseDataset, poseCaptureTarget, normalizedSignals),
+    [normalizedSignals, poseCaptureTarget, poseDataset]
+  );
+  const poseCaptureNow = poseCaptureRun ? performance.now() : 0;
+  const poseCaptureIsPreparing = Boolean(poseCaptureRun && poseCaptureNow < poseCaptureRun.startedAt);
+  const poseCaptureCountdown = poseCaptureRun
+    ? Math.max(0, Math.ceil((poseCaptureRun.startedAt - poseCaptureNow) / 1000))
+    : 0;
+  const poseCaptureProgress = poseCaptureRun
+    ? poseCaptureIsPreparing
+      ? Math.round(clamp((poseCapturePrepMs - (poseCaptureRun.startedAt - poseCaptureNow)) / poseCapturePrepMs, 0, 1) * 100)
+      : Math.round(clamp((poseCaptureNow - poseCaptureRun.startedAt) / poseCaptureDurationMs, 0, 1) * 100)
+    : 0;
 
   const statusLabel = useMemo(() => {
     if (status === 'requesting-camera') return 'Requesting camera';
@@ -137,6 +216,11 @@ export function App() {
       stopMicrophoneStream();
     };
   }, []);
+
+  useEffect(() => {
+    poseDatasetRef.current = poseDataset;
+    savePoseCaptureDataset(poseDataset);
+  }, [poseDataset]);
 
   useEffect(() => {
     if (!activeReaction) {
@@ -234,7 +318,12 @@ export function App() {
           }
         } else {
           const nextNormalizedSignals = normalizeSignals(nextRawSignals, currentBaseline);
-          const nextCandidates = evaluateReactionRules(nextNormalizedSignals);
+          recordPoseCaptureFrame(nextNormalizedSignals, timestamp);
+
+          const nextCandidates = mergeReactionCandidates(
+            evaluateReactionRules(nextNormalizedSignals),
+            getCapturedPoseCandidates(nextNormalizedSignals)
+          );
           const invalidatedCategories = new Set<MemeCategory>();
           const nextReactionState = controllerRef.current.update(nextCandidates, timestamp, invalidatedCategories);
 
@@ -250,8 +339,154 @@ export function App() {
     frameRef.current = requestAnimationFrame(tick);
   }
 
+  function getCapturedPoseCandidates(signals: NormalizedSignals): ReactionCandidate[] {
+    return scoreAllCapturedPoses(poseDatasetRef.current, signals)
+      .filter((score) => isCapturedPoseCandidateAllowed(score.category, signals))
+      .filter((score) => score.score >= getCapturedPoseCandidateThreshold(score.category))
+      .map((score) => ({
+        category: score.category,
+        score: score.score,
+        reason: 'captured pose model'
+      }));
+  }
+
+  function recordPoseCaptureFrame(signals: NormalizedSignals, timestamp: number) {
+    const run = poseCaptureRunRef.current;
+    if (!run) {
+      return;
+    }
+
+    if (timestamp - run.lastUiUpdatedAt >= poseCaptureUiIntervalMs) {
+      run.lastUiUpdatedAt = timestamp;
+      setPoseCaptureRun({ ...run, samples: [...run.samples] });
+    }
+
+    if (timestamp < run.startedAt) {
+      return;
+    }
+
+    if (timestamp - run.lastCapturedAt >= poseCaptureFrameIntervalMs && timestamp <= run.endsAt) {
+      run.samples.push(createPoseCaptureSample(run.category, run.label, signals));
+      run.lastCapturedAt = timestamp;
+      setPoseCaptureRun({ ...run, samples: [...run.samples] });
+    }
+
+    if (timestamp >= run.endsAt) {
+      finishPoseCaptureRun();
+    }
+  }
+
+  function finishPoseCaptureRun() {
+    const run = poseCaptureRunRef.current;
+    if (!run) {
+      return;
+    }
+
+    poseCaptureRunRef.current = null;
+    setPoseCaptureRun(null);
+
+    if (run.samples.length === 0) {
+      setPoseCaptureMessage('No live frames were captured. Start the camera and try again.');
+      return;
+    }
+
+    const quality = getPoseCaptureQuality(run);
+    if (!quality.accepted) {
+      setPoseCaptureMessage(quality.message);
+      return;
+    }
+
+    setPoseDataset((current) => appendPoseCaptureSamples(current, run.samples));
+    setPoseCaptureMessage(
+      `Saved ${run.samples.length} ${run.label} samples for ${categoryLabels[run.category]}. ${quality.message}`
+    );
+  }
+
   async function previewCategory(category: MemeCategory) {
     setDisplayedMeme(await memeSourceRef.current.getRandom(category));
+  }
+
+  function startPoseCapture(label: PoseCaptureLabel) {
+    if (status !== 'live') {
+      setPoseCaptureMessage('Start the camera and finish calibration before recording pose examples.');
+      return;
+    }
+
+    if (poseCaptureRunRef.current) {
+      return;
+    }
+
+    const now = performance.now();
+    const startedAt = now + poseCapturePrepMs;
+    const run: PoseCaptureRun = {
+      category: poseCaptureTarget,
+      label,
+      startedAt,
+      endsAt: startedAt + poseCaptureDurationMs,
+      lastCapturedAt: startedAt - poseCaptureFrameIntervalMs,
+      lastUiUpdatedAt: now,
+      samples: []
+    };
+
+    poseCaptureRunRef.current = run;
+    setPoseCaptureRun(run);
+    setPoseCaptureMessage(`Get into the ${categoryLabels[poseCaptureTarget]} ${label} pose. Capture starts in 3 seconds.`);
+  }
+
+  async function copyPoseDataset() {
+    const serialized = JSON.stringify(poseDataset, null, 2);
+    try {
+      await navigator.clipboard.writeText(serialized);
+      setPoseCaptureMessage('Copied pose dataset JSON to clipboard.');
+    } catch {
+      setPoseCaptureMessage('Clipboard copy failed. Use Download dataset instead.');
+    }
+  }
+
+  function downloadPoseDataset() {
+    const blob = new Blob([JSON.stringify(poseDataset, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `memereact-pose-dataset-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setPoseCaptureMessage('Downloaded pose dataset JSON.');
+  }
+
+  function importPoseDataset(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    file.text().then((value) => {
+      const parsed = parsePoseCaptureDataset(value);
+      if (!parsed) {
+        setPoseCaptureMessage('That file is not a valid Meme React pose dataset.');
+        return;
+      }
+
+      setPoseDataset(parsed);
+      setPoseCaptureMessage(`Imported ${parsed.samples.length} pose samples.`);
+    });
+  }
+
+  function clearPoseCaptureTarget() {
+    const counts = getPoseCaptureCounts(poseDataset, poseCaptureTarget);
+    if (counts.good + counts.bad === 0) {
+      setPoseCaptureMessage(`No saved examples for ${categoryLabels[poseCaptureTarget]}.`);
+      return;
+    }
+
+    const confirmed = window.confirm(`Clear all captured pose examples for ${categoryLabels[poseCaptureTarget]}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setPoseDataset((current) => removePoseCapturesForCategory(current, poseCaptureTarget));
+    setPoseCaptureMessage(`Cleared captured examples for ${categoryLabels[poseCaptureTarget]}.`);
   }
 
   function switchMode(nextMode: AppMode) {
@@ -280,6 +515,7 @@ export function App() {
       holdMs: 1200,
       cooldownMs: 260
     });
+    poseCaptureRunRef.current = null;
 
     setCalibrationProgress(0);
     setBaseline(null);
@@ -288,6 +524,7 @@ export function App() {
     setCandidates([]);
     setActiveReaction(null);
     setDisplayedMeme(null);
+    setPoseCaptureRun(null);
     resetClipSession();
   }
 
@@ -446,7 +683,7 @@ export function App() {
                   <strong>{guideMatch.hint}</strong>
                 </div>
                 <div className="guide-checks">
-                  {guideMatch.checks.map((check) => (
+                  {visibleGuideChecks.map((check) => (
                     <div key={check.label} className={check.met ? 'is-met' : ''}>
                       <span>{check.label}</span>
                       <strong>{Math.round(check.progress * 100)}%</strong>
@@ -481,6 +718,14 @@ export function App() {
               {appMode === 'guide' && status === 'live' && (
                 <div className={`guide-badge guide-badge-${guideMatch.status}`} role="status">
                   {guideStatusLabels[guideMatch.status]} · {Math.round(guideMatch.score * 100)}%
+                </div>
+              )}
+              {poseCaptureRun && (
+                <div className={`pose-capture-badge ${poseCaptureIsPreparing ? 'is-preparing' : 'is-recording'}`} role="status">
+                  <span />
+                  {poseCaptureIsPreparing
+                    ? `Get ready ${poseCaptureCountdown}`
+                    : `Capturing ${poseCaptureRun.label} ${poseCaptureProgress}%`}
                 </div>
               )}
             </div>
@@ -554,6 +799,115 @@ export function App() {
 
           {developerOpen && (
             <div className="developer-body">
+              <div className="pose-capture-panel">
+                <div className="pose-capture-head">
+                  <div>
+                    <span>Captured pose model</span>
+                    <strong>{categoryLabels[poseCaptureTarget]}</strong>
+                  </div>
+                  <Sparkles size={20} />
+                </div>
+                <div className="pose-capture-controls">
+                  <label>
+                    Target
+                    <select
+                      value={poseCaptureTarget}
+                      disabled={Boolean(poseCaptureRun)}
+                      onChange={(event) => setPoseCaptureTarget(event.target.value as MemeCategory)}
+                    >
+                      {memeCategories.map((category) => (
+                        <option key={category} value={category}>{categoryLabels[category]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={Boolean(poseCaptureRun) || status !== 'live'}
+                    onClick={() => startPoseCapture('good')}
+                  >
+                    Record good
+                  </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(poseCaptureRun) || status !== 'live'}
+                    onClick={() => startPoseCapture('bad')}
+                  >
+                    Record bad
+                  </button>
+                </div>
+                <div className="pose-capture-meter">
+                  <div>
+                    <span>
+                      {poseCaptureRun
+                        ? poseCaptureIsPreparing
+                          ? `Get ready for ${poseCaptureRun.label}`
+                          : `Capturing ${poseCaptureRun.label}`
+                        : 'Model score'}
+                    </span>
+                    <strong>
+                      {poseCaptureRun
+                        ? poseCaptureIsPreparing
+                          ? `${poseCaptureCountdown}s`
+                          : `${poseCaptureProgress}%`
+                        : selectedCapturedPoseScore
+                          ? `${Math.round(selectedCapturedPoseScore.score * 100)}%`
+                          : 'Need 8 good'}
+                    </strong>
+                  </div>
+                  <span>
+                    <span style={{
+                      width: `${poseCaptureRun
+                        ? poseCaptureProgress
+                        : selectedCapturedPoseScore
+                          ? Math.round(selectedCapturedPoseScore.score * 100)
+                          : 0}%`
+                    }} />
+                  </span>
+                </div>
+                <div className="pose-capture-stats">
+                  <span>Good: {poseCaptureCounts.good}</span>
+                  <span>Bad: {poseCaptureCounts.bad}</span>
+                  <span>Total: {poseDataset.samples.length}</span>
+                </div>
+                {capturedPoseScores.length > 0 && (
+                  <div className="pose-capture-scores">
+                    {capturedPoseScores.slice(0, 3).map((score) => (
+                      <div key={score.category}>
+                        <span>{categoryLabels[score.category]}</span>
+                        <strong>{Math.round(score.score * 100)}%</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="pose-capture-message">{poseCaptureMessage}</p>
+                <div className="pose-capture-actions">
+                  <button type="button" onClick={copyPoseDataset}>
+                    <Download size={16} />
+                    Copy JSON
+                  </button>
+                  <button type="button" onClick={downloadPoseDataset}>
+                    <Download size={16} />
+                    Download JSON
+                  </button>
+                  <label>
+                    <Eye size={16} />
+                    Import JSON
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={(event) => {
+                        importPoseDataset(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                  <button type="button" onClick={clearPoseCaptureTarget}>
+                    <Trash2 size={16} />
+                    Clear target
+                  </button>
+                </div>
+              </div>
+
               <div className="metrics-grid">
                 <Metric label="Hands" value={rawSignals.hands.handCount.toString()} />
                 <Metric label="Thumbs" value={rawSignals.hands.thumbsUp ? 'yes' : 'no'} />
@@ -561,6 +915,8 @@ export function App() {
                 <Metric label="Finger mouth" value={rawSignals.hands.fingerNearMouth ? 'yes' : 'no'} />
                 <Metric label="Open palms" value={rawSignals.hands.raisedOpenPalms.toString()} />
                 <Metric label="Thumb palms" value={rawSignals.hands.raisedHandsWithThumbs.toString()} />
+                <Metric label="Prayer hands" value={rawSignals.hands.palmsTogetherNearFace ? 'yes' : 'no'} />
+                <Metric label="Finger gun" value={rawSignals.hands.fingerGunAtCamera ? 'yes' : 'no'} />
                 <Metric label="On head" value={rawSignals.hands.handsOnHead.toString()} />
                 <Metric label="Head touch" value={rawSignals.hands.headTouches.toString()} />
                 <Metric label="Side palms" value={rawSignals.hands.sideHeadPalmContacts.toString()} />
@@ -575,7 +931,10 @@ export function App() {
                 <Metric label="Scale" value={rawSignals.face.faceScale.toFixed(2)} />
                 <Metric label="Frown" value={rawSignals.face.mouthFrown.toFixed(2)} />
                 <Metric label="Look up" value={rawSignals.face.lookUp.toFixed(2)} />
+                <Metric label="Look down" value={rawSignals.face.lookDown.toFixed(2)} />
                 <Metric label="Head up" value={rawSignals.face.headTiltUp.toFixed(2)} />
+                <Metric label="Head down" value={rawSignals.face.headTiltDown.toFixed(2)} />
+                <Metric label="Head side" value={rawSignals.face.headTiltSide.toFixed(2)} />
                 <Metric label="Tongue" value={rawSignals.face.tongueOut.toFixed(2)} />
                 <Metric label="Smile" value={rawSignals.face.smile.toFixed(2)} />
                 <Metric label="Mouth d" value={normalizedSignals.face.mouthOpenDelta.toFixed(2)} />
@@ -584,7 +943,10 @@ export function App() {
                 <Metric label="Scale x" value={normalizedSignals.face.faceScaleRatio.toFixed(2)} />
                 <Metric label="Frown d" value={normalizedSignals.face.mouthFrownDelta.toFixed(2)} />
                 <Metric label="Look up d" value={normalizedSignals.face.lookUpDelta.toFixed(2)} />
+                <Metric label="Look down d" value={normalizedSignals.face.lookDownDelta.toFixed(2)} />
                 <Metric label="Head up d" value={normalizedSignals.face.headTiltUpDelta.toFixed(2)} />
+                <Metric label="Head down d" value={normalizedSignals.face.headTiltDownDelta.toFixed(2)} />
+                <Metric label="Head side d" value={normalizedSignals.face.headTiltSideDelta.toFixed(2)} />
                 <Metric label="Tongue d" value={normalizedSignals.face.tongueOutDelta.toFixed(2)} />
                 <Metric label="Smile d" value={normalizedSignals.face.smileDelta.toFixed(2)} />
               </div>
@@ -622,6 +984,103 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function getVisibleGuideChecks(checks: PoseGuideCheck[]): PoseGuideCheck[] {
+  const unmetChecks = checks
+    .filter((check) => !check.met)
+    .sort((a, b) => a.progress - b.progress);
+  const metChecks = checks.filter((check) => check.met);
+
+  return [...unmetChecks, ...metChecks].slice(0, 2);
+}
+
 function formatRatios(values: number[]): string {
   return values.length > 0 ? values.map((value) => value.toFixed(2)).join(' / ') : '-';
+}
+
+function mergeReactionCandidates(
+  ruleCandidates: ReactionCandidate[],
+  capturedCandidates: ReactionCandidate[]
+): ReactionCandidate[] {
+  const byCategory = new Map<MemeCategory, ReactionCandidate>();
+
+  for (const candidate of [...ruleCandidates, ...capturedCandidates]) {
+    const current = byCategory.get(candidate.category);
+    if (!current || candidate.score > current.score) {
+      byCategory.set(candidate.category, candidate);
+    }
+  }
+
+  return [...byCategory.values()].sort((a, b) => b.score - a.score);
+}
+
+function getPoseCaptureQuality(run: PoseCaptureRun): { accepted: boolean; message: string } {
+  const handVisibleSamples = run.samples.filter((sample) => {
+    const handCountIndex = sample.features.names.indexOf('handCount');
+    return (sample.features.values[handCountIndex] ?? 0) > 0;
+  }).length;
+  const handVisiblePercent = Math.round((handVisibleSamples / run.samples.length) * 100);
+
+  if (
+    run.label === 'good' &&
+    handRequiredCapturedCategories.has(run.category) &&
+    handVisiblePercent < (minimumHandVisiblePercentByCategory[run.category] ?? 70)
+  ) {
+    return {
+      accepted: false,
+      message: `Rejected capture: hands were visible in only ${handVisiblePercent}% of frames. Keep at least part of the hand detectable during the countdown and capture.`
+    };
+  }
+
+  if (handRequiredCapturedCategories.has(run.category)) {
+    return {
+      accepted: true,
+      message: `Hand visible in ${handVisiblePercent}% of frames.`
+    };
+  }
+
+  return {
+    accepted: true,
+    message: 'Capture quality checked.'
+  };
+}
+
+function getCapturedPoseCandidateThreshold(category: MemeCategory): number {
+  return capturedPoseCandidateThresholds[category] ?? defaultCapturedPoseCandidateThreshold;
+}
+
+function isCapturedPoseCandidateAllowed(category: MemeCategory, signals: NormalizedSignals): boolean {
+  if (category !== 'lets-larp') {
+    return true;
+  }
+
+  return signals.hands.handCount >= 1 &&
+    !signals.hands.handNearFace &&
+    !signals.hands.fingerNearMouth &&
+    signals.hands.headTouches === 0 &&
+    signals.hands.handsOnHead === 0;
+}
+
+function loadPoseCaptureDataset(): PoseCaptureDataset {
+  if (typeof window === 'undefined') {
+    return createEmptyPoseDataset();
+  }
+
+  const stored = window.localStorage.getItem(poseCaptureStorageKey);
+  if (!stored) {
+    return createEmptyPoseDataset();
+  }
+
+  return parsePoseCaptureDataset(stored) ?? createEmptyPoseDataset();
+}
+
+function savePoseCaptureDataset(dataset: PoseCaptureDataset) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(poseCaptureStorageKey, JSON.stringify(dataset));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

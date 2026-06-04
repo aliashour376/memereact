@@ -3,7 +3,12 @@ export const memeCategories = [
   'we-are-cooked',
   'ah-hell-nah',
   'thinking',
-  'happy'
+  'happy',
+  'lets-larp',
+  'no-idea-cuh',
+  'son',
+  'tf',
+  'zoltraak'
 ] as const;
 
 export type MemeCategory = (typeof memeCategories)[number];

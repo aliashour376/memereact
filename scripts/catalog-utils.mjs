@@ -6,7 +6,12 @@ export const supportedCategories = [
   'we-are-cooked',
   'ah-hell-nah',
   'thinking',
-  'happy'
+  'happy',
+  'lets-larp',
+  'no-idea-cuh',
+  'son',
+  'tf',
+  'zoltraak'
 ];
 
 const supportedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);

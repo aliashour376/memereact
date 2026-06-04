@@ -21,13 +21,14 @@ const reactionRules: ReactionRule[] = [
     reason: 'both palms raised',
     evaluate: (signals) =>
       signals.hands.headTouches === 0 &&
-      signals.hands.raisedOpenPalms >= 2
+      signals.hands.raisedOpenPalms >= 2 &&
+      arePalmsHigh(signals.hands.palmCenterYRatio)
         ? 1
         : 0
   },
   {
     category: 'we-are-cooked',
-    reason: 'palms on sides of head with open mouth and wide eyes',
+    reason: 'palms on head',
     evaluate: (signals) => {
       const hands = signals.hands.headTouches >= 2 ? 0.5 : 0;
       const mouth = ramp(signals.face.mouthOpenDelta, 0.08, 0.22) * 0.3;
@@ -39,9 +40,9 @@ const reactionRules: ReactionRule[] = [
     category: 'ah-hell-nah',
     reason: 'head tilted upward in shock',
     evaluate: (signals) => {
-      const gaze = ramp(signals.face.headTiltUpDelta, 0.04, 0.18) * 0.7;
-      const mouth = ramp(signals.face.mouthOpenDelta, 0.08, 0.18) * 0.3;
-      return gaze + mouth;
+      const gaze = ramp(signals.face.headTiltUpDelta, 0.04, 0.18);
+      const mouth = ramp(signals.face.mouthOpenDelta, 0.08, 0.18);
+      return mouth > 0 ? gaze * 0.65 + mouth * 0.35 : 0;
     }
   },
   {
@@ -93,4 +94,12 @@ function ramp(value: number, start: number, end: number): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function arePalmsHigh(palmCenterYRatio: number[]): boolean {
+  if (palmCenterYRatio.length < 2) {
+    return true;
+  }
+
+  return palmCenterYRatio.filter((ratio) => ratio <= 0.42).length >= 2;
 }

@@ -19,4 +19,19 @@ export const localMemeCatalog: MemeCatalog = {
   'happy': [
     { id: 'happy-happy', category: 'happy', src: assetSrc('memes/happy/happy.jpg') },
   ],
+  'lets-larp': [
+    { id: 'lets-larp-lets-larp', category: 'lets-larp', src: assetSrc('memes/lets-larp/lets-larp.png') },
+  ],
+  'no-idea-cuh': [
+    { id: 'no-idea-cuh-no-idea-cuh', category: 'no-idea-cuh', src: assetSrc('memes/no-idea-cuh/no-idea-cuh.png') },
+  ],
+  'son': [
+    { id: 'son-son', category: 'son', src: assetSrc('memes/son/son.png') },
+  ],
+  'tf': [
+    { id: 'tf-tf', category: 'tf', src: assetSrc('memes/tf/tf.jpg') },
+  ],
+  'zoltraak': [
+    { id: 'zoltraak-zoltraak', category: 'zoltraak', src: assetSrc('memes/zoltraak/zoltraak.png') },
+  ],
 };
