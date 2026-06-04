@@ -9,7 +9,8 @@ import {
 } from './calibration.ts';
 import { localMemeCatalog } from './generated/memeCatalog.ts';
 import { createLocalMemeSource } from './memeLibrary.ts';
-import type { MemeAsset, MemeCategory } from './memeTypes.ts';
+import { memeCategories, type MemeAsset, type MemeCategory } from './memeTypes.ts';
+import { evaluatePoseGuide } from './poseGuide.ts';
 import { evaluateReactionRules, type ReactionCandidate } from './reactionRules.ts';
 import { createReactionController, type ActiveReaction } from './reactionState.ts';
 import { createVisionService, type VisionService } from './visionService.ts';
@@ -24,6 +25,7 @@ import {
 } from './useReactionClipRecorder.ts';
 
 type AppStatus = 'idle' | 'requesting-camera' | 'loading-models' | 'calibrating' | 'live' | 'error';
+type AppMode = 'react' | 'guide';
 
 const categoryLabels: Record<MemeCategory, string> = {
   'absolute-cinema': 'Absolute cinema',
@@ -32,6 +34,13 @@ const categoryLabels: Record<MemeCategory, string> = {
   thinking: 'Thinking',
   happy: 'Happy'
 };
+
+const guideStatusLabels = {
+  waiting: 'Waiting',
+  searching: 'Searching',
+  close: 'Close',
+  matched: 'Matched'
+} as const;
 
 const neutralNormalizedSignals: NormalizedSignals = {
   hands: neutralSignals.hands,
@@ -74,7 +83,11 @@ export function App() {
   const [candidates, setCandidates] = useState<ReactionCandidate[]>([]);
   const [activeReaction, setActiveReaction] = useState<ActiveReaction | null>(null);
   const [displayedMeme, setDisplayedMeme] = useState<MemeAsset | null>(null);
+  const [appMode, setAppMode] = useState<AppMode>('react');
+  const [guideTarget, setGuideTarget] = useState<MemeCategory>('absolute-cinema');
+  const [guideMeme, setGuideMeme] = useState<MemeAsset | null>(null);
   const [developerOpen, setDeveloperOpen] = useState(false);
+  const recordableReaction = appMode === 'react' ? activeReaction : null;
   const {
     clipCanvasRef,
     reactionClipsEnabled,
@@ -91,11 +104,17 @@ export function App() {
     stopRecording,
     stopMicrophoneStream
   } = useReactionClipRecorder({
-    activeReaction,
+    activeReaction: recordableReaction,
     displayedMeme,
     categoryLabels,
     videoRef
   });
+
+  const guideMatch = useMemo(
+    () => evaluatePoseGuide(normalizedSignals, guideTarget),
+    [guideTarget, normalizedSignals]
+  );
+  const panelMeme = appMode === 'guide' ? guideMeme : displayedMeme;
 
   const statusLabel = useMemo(() => {
     if (status === 'requesting-camera') return 'Requesting camera';
@@ -136,6 +155,20 @@ export function App() {
       cancelled = true;
     };
   }, [activeReaction]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    memeSourceRef.current.getRandom(guideTarget).then((meme) => {
+      if (!cancelled) {
+        setGuideMeme(meme);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [guideTarget]);
 
   async function startExperience() {
     const video = videoRef.current;
@@ -221,6 +254,14 @@ export function App() {
     setDisplayedMeme(await memeSourceRef.current.getRandom(category));
   }
 
+  function switchMode(nextMode: AppMode) {
+    if (clipLifecycle === 'recording') {
+      return;
+    }
+
+    setAppMode(nextMode);
+  }
+
   function resetSessionState() {
     if (frameRef.current !== null) {
       cancelAnimationFrame(frameRef.current);
@@ -256,94 +297,165 @@ export function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Meme React</p>
-            <h1>Reaction cam</h1>
+            <h1>{appMode === 'guide' ? 'Pose guide' : 'Reaction cam'}</h1>
           </div>
-          <div className={`status-pill status-${status}`}>
-            <span />
-            {statusLabel}
+          <div className="topbar-actions">
+            <div className="mode-tabs" role="tablist" aria-label="Mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={appMode === 'react'}
+                className={appMode === 'react' ? 'is-active' : ''}
+                disabled={clipLifecycle === 'recording'}
+                onClick={() => switchMode('react')}
+              >
+                <Video size={16} />
+                React
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={appMode === 'guide'}
+                className={appMode === 'guide' ? 'is-active' : ''}
+                disabled={clipLifecycle === 'recording'}
+                onClick={() => switchMode('guide')}
+              >
+                <Eye size={16} />
+                Guide
+              </button>
+            </div>
+            <div className={`status-pill status-${status}`}>
+              <span />
+              {statusLabel}
+            </div>
           </div>
         </header>
 
-        <section className="live-grid has-recording-dock">
-          <aside className="recording-dock" aria-label="Recording controls">
-            <div className="panel-head">
-              <Video size={18} />
-              <span>Recording</span>
-            </div>
-            <div className="recording-drawer">
-              <div className="clip-panel">
-                <div className="clip-toggle-row">
-                  <button
-                    className={`mode-toggle ${reactionClipsEnabled ? 'is-on' : ''}`}
-                    type="button"
-                    role="switch"
-                    aria-checked={reactionClipsEnabled}
-                    onClick={toggleReactionClips}
-                  >
-                    {reactionClipsEnabled ? <Video size={17} /> : <VideoOff size={17} />}
-                    Reaction clips: {reactionClipsEnabled ? 'On' : 'Off'}
-                  </button>
-                  {reactionClipsEnabled && (
+        <section className={`live-grid ${appMode === 'guide' ? 'has-guide-dock' : 'has-recording-dock'}`}>
+          {appMode === 'react' ? (
+            <aside className="recording-dock" aria-label="Recording controls">
+              <div className="panel-head">
+                <Video size={18} />
+                <span>Recording</span>
+              </div>
+              <div className="recording-drawer">
+                <div className="clip-panel">
+                  <div className="clip-toggle-row">
                     <button
-                      className={`mode-toggle ${microphoneEnabled ? 'is-on' : ''}`}
+                      className={`mode-toggle ${reactionClipsEnabled ? 'is-on' : ''}`}
                       type="button"
                       role="switch"
-                      aria-checked={microphoneEnabled}
-                      onClick={toggleMicrophone}
+                      aria-checked={reactionClipsEnabled}
+                      onClick={toggleReactionClips}
                     >
-                      {microphoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}
-                      Microphone: {microphoneEnabled ? 'On' : 'Off'}
+                      {reactionClipsEnabled ? <Video size={17} /> : <VideoOff size={17} />}
+                      Reaction clips: {reactionClipsEnabled ? 'On' : 'Off'}
                     </button>
-                  )}
-                </div>
-                <div className={`clip-state clip-state-${clipLifecycle}`}>
-                  {clipLifecycle === 'recording' ? (
-                    <>
-                      <span className="recording-dot" />
-                      {microphoneEnabled ? 'Recording video + mic' : 'Recording video'}
-                    </>
-                  ) : clipLifecycle === 'preview-ready' && clipPreview ? (
-                    <span>Latest clip ready</span>
-                  ) : reactionClipsEnabled ? (
-                    <span>Reaction clips armed</span>
-                  ) : (
-                    <span>Reaction clips off</span>
-                  )}
-                </div>
-                {clipMessage && <p className="clip-message">{clipMessage}</p>}
-                <div className={`clip-preview ${clipPreview ? 'has-clip' : ''}`}>
-                  {clipPreview ? (
-                    <>
-                      <div className="clip-preview-head">
-                        <div>
-                          <strong>{clipPreview.label}</strong>
-                          <span>{formatClipTimestamp(clipPreview.createdAt)} · 3 sec · {clipPreview.includesAudio ? 'video + mic' : 'video only'}</span>
+                    {reactionClipsEnabled && (
+                      <button
+                        className={`mode-toggle ${microphoneEnabled ? 'is-on' : ''}`}
+                        type="button"
+                        role="switch"
+                        aria-checked={microphoneEnabled}
+                        onClick={toggleMicrophone}
+                      >
+                        {microphoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}
+                        Microphone: {microphoneEnabled ? 'On' : 'Off'}
+                      </button>
+                    )}
+                  </div>
+                  <div className={`clip-state clip-state-${clipLifecycle}`}>
+                    {clipLifecycle === 'recording' ? (
+                      <>
+                        <span className="recording-dot" />
+                        {microphoneEnabled ? 'Recording video + mic' : 'Recording video'}
+                      </>
+                    ) : clipLifecycle === 'preview-ready' && clipPreview ? (
+                      <span>Latest clip ready</span>
+                    ) : reactionClipsEnabled ? (
+                      <span>Reaction clips armed</span>
+                    ) : (
+                      <span>Reaction clips off</span>
+                    )}
+                  </div>
+                  {clipMessage && <p className="clip-message">{clipMessage}</p>}
+                  <div className={`clip-preview ${clipPreview ? 'has-clip' : ''}`}>
+                    {clipPreview ? (
+                      <>
+                        <div className="clip-preview-head">
+                          <div>
+                            <strong>{clipPreview.label}</strong>
+                            <span>{formatClipTimestamp(clipPreview.createdAt)} · 3 sec · {clipPreview.includesAudio ? 'video + mic' : 'video only'}</span>
+                          </div>
+                          <span>{formatBytes(clipPreview.blob.size)}</span>
                         </div>
-                        <span>{formatBytes(clipPreview.blob.size)}</span>
-                      </div>
-                      <video src={clipPreview.url} controls playsInline />
-                      <div className="clip-actions">
-                        <button type="button" onClick={downloadClip}>
-                          <Download size={16} />
-                          Download
-                        </button>
-                        <button type="button" onClick={prepareNextClip}>
-                          <Video size={16} />
-                          Record next
-                        </button>
-                        <button type="button" onClick={discardClip}>
-                          <Trash2 size={16} />
-                          Discard
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="clip-preview-empty">No clip yet</div>
-                  )}
+                        <video src={clipPreview.url} controls playsInline />
+                        <div className="clip-actions">
+                          <button type="button" onClick={downloadClip}>
+                            <Download size={16} />
+                            Download
+                          </button>
+                          <button type="button" onClick={prepareNextClip}>
+                            <Video size={16} />
+                            Record next
+                          </button>
+                          <button type="button" onClick={discardClip}>
+                            <Trash2 size={16} />
+                            Discard
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="clip-preview-empty">No clip yet</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
+          ) : (
+            <aside className="guide-dock" aria-label="Pose guide controls">
+              <div className="panel-head">
+                <Eye size={18} />
+                <span>Guide</span>
+              </div>
+              <div className="guide-panel">
+                <div className="guide-targets">
+                  {memeCategories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      className={guideTarget === category ? 'is-active' : ''}
+                      aria-pressed={guideTarget === category}
+                      onClick={() => setGuideTarget(category)}
+                    >
+                      {categoryLabels[category]}
+                    </button>
+                  ))}
+                </div>
+                <div className={`guide-meter guide-meter-${guideMatch.status}`}>
+                  <div>
+                    <strong>{guideStatusLabels[guideMatch.status]}</strong>
+                    <span>{Math.round(guideMatch.score * 100)}%</span>
+                  </div>
+                  <span className="guide-meter-track">
+                    <span style={{ width: `${Math.round(guideMatch.score * 100)}%` }} />
+                  </span>
+                </div>
+                <div className={`guide-hint guide-hint-${guideMatch.status}`}>
+                  <span>Next move</span>
+                  <strong>{guideMatch.hint}</strong>
+                </div>
+                <div className="guide-checks">
+                  {guideMatch.checks.map((check) => (
+                    <div key={check.label} className={check.met ? 'is-met' : ''}>
+                      <span>{check.label}</span>
+                      <strong>{Math.round(check.progress * 100)}%</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          )}
 
           <div className="camera-panel">
             <video ref={videoRef} className="camera-feed" playsInline muted />
@@ -364,6 +476,11 @@ export function App() {
                 <div className="recording-badge" role="status">
                   <span />
                   {microphoneEnabled ? 'Recording video + mic' : 'Recording video'}
+                </div>
+              )}
+              {appMode === 'guide' && status === 'live' && (
+                <div className={`guide-badge guide-badge-${guideMatch.status}`} role="status">
+                  {guideStatusLabels[guideMatch.status]} · {Math.round(guideMatch.score * 100)}%
                 </div>
               )}
             </div>
@@ -399,23 +516,33 @@ export function App() {
           <aside className="meme-panel">
             <div className="panel-head">
               <Sparkles size={18} />
-              <span>{displayedMeme ? categoryLabels[displayedMeme.category] : 'Waiting'}</span>
+              <span>{appMode === 'guide' ? `Target: ${categoryLabels[guideTarget]}` : displayedMeme ? categoryLabels[displayedMeme.category] : 'Waiting'}</span>
             </div>
-            <div className={`meme-frame ${displayedMeme ? 'is-active' : ''}`}>
-              {displayedMeme ? (
-                <img key={displayedMeme.id} src={displayedMeme.src} alt={`${categoryLabels[displayedMeme.category]} meme`} />
+            <div className={`meme-frame ${panelMeme ? 'is-active' : ''}`}>
+              {panelMeme ? (
+                <img key={panelMeme.id} src={panelMeme.src} alt={`${categoryLabels[panelMeme.category]} meme`} />
               ) : (
                 <div className="meme-empty">No reaction</div>
               )}
             </div>
             <div className="reaction-meta">
-              <strong>{activeReaction ? categoryLabels[activeReaction.category] : 'Neutral'}</strong>
-              <span>{activeReaction ? activeReaction.reason : baseline ? 'Listening' : 'Not calibrated'}</span>
+              {appMode === 'guide' ? (
+                <>
+                  <strong>{Math.round(guideMatch.score * 100)}% match</strong>
+                  <span>{baseline ? guideStatusLabels[guideMatch.status] : 'Not calibrated'}</span>
+                </>
+              ) : (
+                <>
+                  <strong>{activeReaction ? categoryLabels[activeReaction.category] : 'Neutral'}</strong>
+                  <span>{activeReaction ? activeReaction.reason : baseline ? 'Listening' : 'Not calibrated'}</span>
+                </>
+              )}
             </div>
           </aside>
           <p className="privacy-strip">
-            Camera preview stays on this device. When reaction clips are enabled, a locked reaction saves one short local clip. Nothing is uploaded.
-            {microphoneEnabled ? ' Microphone audio is included only while Microphone is On.' : ''}
+            {appMode === 'guide'
+              ? 'Camera preview stays on this device. Guide matching runs locally from the same live pose signals.'
+              : `Camera preview stays on this device. When reaction clips are enabled, a locked reaction saves one short local clip. Nothing is uploaded.${microphoneEnabled ? ' Microphone audio is included only while Microphone is On.' : ''}`}
           </p>
         </section>
 

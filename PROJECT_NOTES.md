@@ -1,6 +1,6 @@
 # Meme React Project Notes
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 ## Project reset
 
@@ -206,6 +206,31 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
    - Clip action buttons should not wrap awkwardly across two lines; on desktop they are a clean three-button row, and on narrow screens they stack deliberately.
    - Do not reintroduce `overflow: hidden` plus fixed height on `.meme-panel` as a layout-shift fix.
 
+17. Pose-match guide first pass.
+   - Added a separate `React` / `Guide` mode toggle in the top bar.
+   - `React` mode keeps the V2 recording dock and local clip behavior.
+   - `Guide` mode swaps the left dock for target selection, a match meter, and per-cue progress checks.
+   - Guide mode uses the same live normalized pose signals as the reaction rules, but does not auto-record clips even if reaction clips were armed in React mode.
+   - The right meme panel shows the selected target meme in Guide mode.
+   - Added `src/poseGuide.ts` and `src/poseGuide.node-test.ts`.
+   - Current automated verification: `npm.cmd test` has 55 passing tests, and `npm.cmd run build` passes.
+   - Dev server checked at `http://127.0.0.1:5173/` with HTTP 200.
+
+18. Pose guide coaching polish.
+   - User chose the low-impact **Better Coaching** direction for Guide mode.
+   - Guide mode now shows one compact `Next move` hint between the match meter and cue checklist.
+   - Hints are generated in `src/poseGuide.ts` from the weakest unmet cue, so the UI can say things like `Show both open palms`, `Move hands away from your head`, `Point a finger near your mouth`, or `Stick your tongue out`.
+   - Matched poses show `Matched - hold it`.
+   - The change is Guide-mode only; React mode, clip recording, mic behavior, local-only export, and the three-panel layout remain unchanged.
+   - Local-first image policy was chosen for future photo additions. Internet images should not be hotlinked into clip export without a separate import/localization plan because of canvas CORS, reliability, privacy, and licensing issues.
+   - Current automated verification: `npm.cmd test` has 56 passing tests, and `npm.cmd run build` passes.
+
+19. `we-are-cooked` guide simplification.
+   - User said the wide-eyes cue is not helpful for the `we-are-cooked` meme guide.
+   - Removed `Widen eyes` from Guide mode checks and hints for `we-are-cooked`.
+   - Guide mode now treats `we-are-cooked` as `Put both palms on head` plus `Mouth open`.
+   - The actual reaction detection rule still keeps eye widening only as a confidence boost unless separately changed.
+
 ## Current live-testing notes
 
 - `absolute-cinema` vs `we-are-cooked`: true head-contact separation has been implemented and needs live validation.
@@ -243,13 +268,13 @@ The generated catalog is rebuilt automatically by the dev, test, and build comma
 
 ## Future idea: pose-match guide
 
-- User wants to revisit a mode where the app helps someone match the pose in a specific meme photo.
-- Keep this separate from the main V2 reaction matching flow for now.
+- First pass is now implemented as a separate `Guide` mode.
+- Keep future additions separate from the main V2 reaction matching and recording flow.
 - Possible future behavior:
-  - show the target meme beside or over the camera preview
+  - refine the target meme beside or over the camera preview
   - provide a ghost/silhouette-style pose guide or simple pose hints
   - compare face/body landmarks against the target pose with a tolerance range
-  - show a match meter such as closer/good/matched
+  - tune the match meter labels and thresholds after live camera testing
   - optionally trigger the meme only when the user is close enough to the photo pose
 - This would be more complex than assigning memes to reaction categories because it needs pose/landmark comparison, tuning, and failure handling for different photos.
 
@@ -327,6 +352,9 @@ If either pose still misfires, record:
 - `thinking` now depends on `Finger mouth = yes`, not merely `Near face = yes`.
 - First thing in a new chat: inspect `git status --short`, read this file, then continue from the current working tree without reverting user or agent changes.
 - If live tuning resumes, start or reuse the dev server at `http://127.0.0.1:5173/` and open the Developer panel.
+- If guide mode tuning resumes, use the new `React` / `Guide` toggle and compare the guide cue percentages with the Developer panel signals.
+- Guide mode now has a `Next move` hint; tune hint priority from `src/poseGuide.ts` if live testing shows a less useful cue is being surfaced first.
+- For `we-are-cooked` Guide mode, do not re-add wide eyes unless the user specifically asks; it was removed as unhelpful.
 - Validate `thinking` from recorded `Near face`, `Finger mouth`, and candidate-list values if it needs more tuning.
 - Validate `happy` from recorded `Tongue`, `Smile`, `Tongue d`, `Smile d`, and candidate-list values if it needs more tuning.
 
@@ -409,3 +437,23 @@ Latest continuation verification on 2026-06-03:
 - `npm.cmd run build`: passed
 - Dev server started at `http://127.0.0.1:5173/`
 - User confirmed the live browser flow works after moving recording logic into `useReactionClipRecorder`.
+
+Latest guide-mode continuation on 2026-06-04:
+
+- `npm.cmd test`: 55 tests passed
+- `npm.cmd run build`: passed
+- Dev server started and checked at `http://127.0.0.1:5173/`
+- Manual camera live-testing of Guide mode thresholds is pending.
+
+Latest guide-coaching continuation on 2026-06-04:
+
+- `npm.cmd test`: 56 tests passed
+- `npm.cmd run build`: passed
+- Guide mode now surfaces a compact `Next move` coaching hint.
+- Manual camera live-testing of hint priority and wording is pending.
+
+Latest `we-are-cooked` guide tuning on 2026-06-04:
+
+- Removed wide-eyes from `we-are-cooked` Guide mode checks and hints.
+- `npm.cmd test`: 56 tests passed
+- `npm.cmd run build`: passed
