@@ -1,8 +1,19 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { localMemeCatalog } from './generated/memeCatalog.ts';
+import { memeCategories } from './memeTypes.ts';
 
 describe('localMemeCatalog', () => {
+  it('ships exactly the five stable reactions', () => {
+    assert.deepEqual(memeCategories, [
+      'absolute-cinema',
+      'we-are-cooked',
+      'ah-hell-nah',
+      'thinking',
+      'happy'
+    ]);
+  });
+
   it('contains one initial meme in each required category', () => {
     assert.deepEqual(
       Object.fromEntries(Object.entries(localMemeCatalog).map(([category, assets]) => [category, assets.length])),

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { evaluatePoseGuide } from './poseGuide.ts';
 import type { NormalizedSignals } from './calibration.ts';
+import { memeCategories } from './memeTypes.ts';
 
 const neutralSignals: NormalizedSignals = {
   hands: {
@@ -36,6 +37,14 @@ const neutralSignals: NormalizedSignals = {
 };
 
 describe('evaluatePoseGuide', () => {
+  it('provides actionable coaching for every stable reaction', () => {
+    for (const category of memeCategories) {
+      const result = evaluatePoseGuide(neutralSignals, category);
+      assert.ok(result.checks.length > 0);
+      assert.ok(result.hint.length > 0);
+    }
+  });
+
   it('matches absolute cinema from two raised open palms away from the head', () => {
     const result = evaluatePoseGuide({
       ...neutralSignals,
@@ -50,8 +59,9 @@ describe('evaluatePoseGuide', () => {
   it('suggests open palms first for neutral absolute cinema', () => {
     const result = evaluatePoseGuide(neutralSignals, 'absolute-cinema');
 
-    assert.equal(result.status, 'searching');
+    assert.equal(result.status, 'waiting');
     assert.equal(result.hint, 'Show both open palms');
+    assert.equal(result.checks.every((check) => !check.met), true);
   });
 
   it('keeps absolute cinema below matched when the hands touch the head', () => {
@@ -93,6 +103,16 @@ describe('evaluatePoseGuide', () => {
 
     assert.equal(result.status, 'close');
     assert.equal(result.hint, 'Point a finger near your mouth');
+  });
+
+  it('matches ah hell nah from the same head and mouth cues used by reactions', () => {
+    const result = evaluatePoseGuide({
+      ...neutralSignals,
+      face: { ...neutralSignals.face, headTiltUpDelta: 0.18, mouthOpenDelta: 0.18 }
+    }, 'ah-hell-nah');
+
+    assert.equal(result.status, 'matched');
+    assert.equal(result.hint, 'Matched - hold it');
   });
 
   it('does not match happy from smile alone', () => {

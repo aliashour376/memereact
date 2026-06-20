@@ -1,10 +1,17 @@
 :root {
+  --app-ui-scale: 0.737;
+  --app-ui-scale-inverse: 1.3568521031;
   color: #f6f2ea;
   background: #08090b;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 * {
@@ -42,10 +49,12 @@ button {
 }
 
 .app-shell {
-  min-height: 100vh;
+  width: 100%;
+  min-height: calc(100vh * var(--app-ui-scale-inverse));
   padding: 22px;
   display: grid;
   align-items: center;
+  zoom: var(--app-ui-scale);
 }
 
 .workspace {
@@ -186,8 +195,7 @@ h1 {
 }
 
 .camera-panel,
-.meme-panel,
-.developer-panel {
+.meme-panel {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(10, 12, 15, 0.72);
   box-shadow:
@@ -363,9 +371,7 @@ h1 {
 }
 
 .primary-button,
-.preview-row button,
-.clip-actions button,
-.developer-toggle {
+.clip-actions button {
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: #08090b;
   background: #f6f2ea;
@@ -871,88 +877,6 @@ h1 {
   background: #7df0b1;
 }
 
-.developer-panel {
-  position: relative;
-  z-index: 1;
-  margin-top: 18px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.developer-toggle {
-  width: 100%;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  color: #f6f2ea;
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-}
-
-.developer-body {
-  padding: 14px;
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.metric,
-.candidate-list {
-  min-height: 68px;
-  padding: 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.metric {
-  display: grid;
-  align-content: space-between;
-}
-
-.metric span,
-.candidate-list span {
-  color: #9f988f;
-  font-size: 0.78rem;
-}
-
-.metric strong {
-  color: #fffdf8;
-  font-size: 1.05rem;
-}
-
-.candidate-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.candidate-list div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.preview-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.preview-row button {
-  min-height: 38px;
-  padding: 0 12px;
-  border-radius: 8px;
-  color: #f6f2ea;
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-}
-
 .privacy-strip {
   position: relative;
   z-index: 1;
@@ -1005,7 +929,9 @@ h1 {
 
   @media (max-width: 860px) {
   .app-shell {
+    min-height: 100vh;
     padding: 16px;
+    zoom: 1;
   }
 
   .workspace {
@@ -1052,10 +978,6 @@ h1 {
   .camera-feed,
   .meme-panel {
     min-height: 430px;
-  }
-
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .recording-dock,

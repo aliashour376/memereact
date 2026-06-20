@@ -30,6 +30,12 @@ export function evaluatePoseGuide(signals: NormalizedSignals, category: MemeCate
 }
 
 function getScore(category: MemeCategory, checks: PoseGuideCheck[]): number {
+  if (category === 'absolute-cinema') {
+    const [openPalms, handsOffHead] = checks;
+    const palmsProgress = openPalms?.progress ?? 0;
+    return clamp(palmsProgress * 0.7 + (palmsProgress > 0 ? (handsOffHead?.progress ?? 0) * 0.3 : 0), 0, 1);
+  }
+
   if (category === 'happy') {
     const [tongue, smile] = checks;
     return clamp((tongue?.progress ?? 0) * 0.82 + (smile?.progress ?? 0) * 0.18, 0, 1);
@@ -42,8 +48,10 @@ function getChecks(signals: NormalizedSignals, category: MemeCategory): PoseGuid
   if (category === 'absolute-cinema') {
     return [
       createCheck('Show both open palms', countProgress(signals.hands.raisedOpenPalms, 2)),
-      createCheck('Raise hands higher', signals.hands.handHeightRatio.some((height) => height >= 0.18) ? 1 : 0),
-      createCheck('Keep hands off head', signals.hands.headTouches === 0 ? 1 : 0)
+      createCheck(
+        'Keep hands off head',
+        signals.hands.raisedOpenPalms > 0 && signals.hands.headTouches === 0 ? 1 : 0
+      )
     ];
   }
 
@@ -134,7 +142,6 @@ function getHint(
 const hintCopy: Record<MemeCategory, Record<string, string>> = {
   'absolute-cinema': {
     'Show both open palms': 'Show both open palms',
-    'Raise hands higher': 'Raise your hands higher',
     'Keep hands off head': 'Move hands away from your head'
   },
   'we-are-cooked': {

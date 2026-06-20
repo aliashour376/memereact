@@ -2,6 +2,8 @@
 
 A browser webcam reaction app that detects a small set of gestures and expressions, then shows a matching meme.
 
+The stable 2.0 release includes five reactions, live pose coaching, and optional local reaction clips.
+
 Project handoff notes and current tuning decisions are recorded in [`PROJECT_NOTES.md`](./PROJECT_NOTES.md).
 
 ## Run
@@ -27,7 +29,7 @@ Place local meme files in:
 public/memes/<category>
 ```
 
-Supported v1 categories:
+Supported reactions:
 
 - `absolute-cinema`
 - `we-are-cooked`

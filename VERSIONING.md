@@ -4,8 +4,9 @@ This project uses Git branches for active work and Git tags for saved releases.
 
 ## Current Version Markers
 
-- `v1.0.0` is the saved stable v1 release.
-- `v2` is the active branch for v2 work.
+- `v1.0.0` is the previous stable release.
+- `v2.0.0` is the stable reaction-clip and pose-guide release.
+- `master` is the production branch deployed to GitHub Pages.
 
 ## Release Rules
 

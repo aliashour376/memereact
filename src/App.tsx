@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ChevronDown, ChevronUp, Download, Eye, Mic, MicOff, Sparkles, Trash2, Video, VideoOff } from 'lucide-react';
+import { Camera, Download, Eye, Mic, MicOff, Sparkles, Trash2, Video, VideoOff } from 'lucide-react';
 import {
   createCalibrationSession,
   normalizeSignals,
@@ -11,11 +11,11 @@ import { localMemeCatalog } from './generated/memeCatalog.ts';
 import { createLocalMemeSource } from './memeLibrary.ts';
 import { memeCategories, type MemeAsset, type MemeCategory } from './memeTypes.ts';
 import { evaluatePoseGuide } from './poseGuide.ts';
-import { evaluateReactionRules, type ReactionCandidate } from './reactionRules.ts';
+import { evaluateReactionRules } from './reactionRules.ts';
 import { createReactionController, type ActiveReaction } from './reactionState.ts';
 import { createVisionService, type VisionService } from './visionService.ts';
 import { loadWithTimeout } from './visionLoader.ts';
-import { deriveVisionSignals, neutralSignals, type VisionSignals } from './visionSignals.ts';
+import { deriveVisionSignals, neutralSignals } from './visionSignals.ts';
 import {
   clipCanvasHeight,
   clipCanvasWidth,
@@ -78,15 +78,12 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [calibrationProgress, setCalibrationProgress] = useState(0);
   const [baseline, setBaseline] = useState<CalibrationBaseline | null>(null);
-  const [rawSignals, setRawSignals] = useState<VisionSignals>(neutralSignals);
   const [normalizedSignals, setNormalizedSignals] = useState<NormalizedSignals>(neutralNormalizedSignals);
-  const [candidates, setCandidates] = useState<ReactionCandidate[]>([]);
   const [activeReaction, setActiveReaction] = useState<ActiveReaction | null>(null);
   const [displayedMeme, setDisplayedMeme] = useState<MemeAsset | null>(null);
   const [appMode, setAppMode] = useState<AppMode>('react');
   const [guideTarget, setGuideTarget] = useState<MemeCategory>('absolute-cinema');
   const [guideMeme, setGuideMeme] = useState<MemeAsset | null>(null);
-  const [developerOpen, setDeveloperOpen] = useState(false);
   const recordableReaction = appMode === 'react' ? activeReaction : null;
   const {
     clipCanvasRef,
@@ -216,8 +213,6 @@ export function App() {
       if (video && service && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         const results = service.detect(video, timestamp);
         const nextRawSignals = deriveVisionSignals(results.hands, results.face);
-        setRawSignals(nextRawSignals);
-
         const currentBaseline = baselineRef.current;
         if (!currentBaseline) {
           const sample = toCalibrationSample(nextRawSignals);
@@ -239,7 +234,6 @@ export function App() {
           const nextReactionState = controllerRef.current.update(nextCandidates, timestamp, invalidatedCategories);
 
           setNormalizedSignals(nextNormalizedSignals);
-          setCandidates(nextCandidates);
           setActiveReaction(nextReactionState.activeReaction);
         }
       }
@@ -248,10 +242,6 @@ export function App() {
     };
 
     frameRef.current = requestAnimationFrame(tick);
-  }
-
-  async function previewCategory(category: MemeCategory) {
-    setDisplayedMeme(await memeSourceRef.current.getRandom(category));
   }
 
   function switchMode(nextMode: AppMode) {
@@ -283,9 +273,7 @@ export function App() {
 
     setCalibrationProgress(0);
     setBaseline(null);
-    setRawSignals(neutralSignals);
     setNormalizedSignals(neutralNormalizedSignals);
-    setCandidates([]);
     setActiveReaction(null);
     setDisplayedMeme(null);
     resetClipSession();
@@ -546,82 +534,7 @@ export function App() {
           </p>
         </section>
 
-        <section className="developer-panel">
-          <button className="developer-toggle" onClick={() => setDeveloperOpen((open) => !open)}>
-            <span>Developer</span>
-            {developerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-
-          {developerOpen && (
-            <div className="developer-body">
-              <div className="metrics-grid">
-                <Metric label="Hands" value={rawSignals.hands.handCount.toString()} />
-                <Metric label="Thumbs" value={rawSignals.hands.thumbsUp ? 'yes' : 'no'} />
-                <Metric label="Near face" value={rawSignals.hands.handNearFace ? 'yes' : 'no'} />
-                <Metric label="Finger mouth" value={rawSignals.hands.fingerNearMouth ? 'yes' : 'no'} />
-                <Metric label="Open palms" value={rawSignals.hands.raisedOpenPalms.toString()} />
-                <Metric label="Thumb palms" value={rawSignals.hands.raisedHandsWithThumbs.toString()} />
-                <Metric label="On head" value={rawSignals.hands.handsOnHead.toString()} />
-                <Metric label="Head touch" value={rawSignals.hands.headTouches.toString()} />
-                <Metric label="Side palms" value={rawSignals.hands.sideHeadPalmContacts.toString()} />
-                <Metric label="Top palms" value={rawSignals.hands.topHeadPalmContacts.toString()} />
-                <Metric label="Palm x" value={formatRatios(rawSignals.hands.palmCenterXRatio)} />
-                <Metric label="Palm y" value={formatRatios(rawSignals.hands.palmCenterYRatio)} />
-                <Metric label="Hand h" value={formatRatios(rawSignals.hands.handHeightRatio)} />
-                <Metric label="Mouth" value={rawSignals.face.mouthOpen.toFixed(2)} />
-                <Metric label="Eyes" value={rawSignals.face.eyeOpenness.toFixed(2)} />
-                <Metric label="Brow" value={rawSignals.face.browFurrow.toFixed(2)} />
-                <Metric label="Squint" value={rawSignals.face.squint.toFixed(2)} />
-                <Metric label="Scale" value={rawSignals.face.faceScale.toFixed(2)} />
-                <Metric label="Frown" value={rawSignals.face.mouthFrown.toFixed(2)} />
-                <Metric label="Look up" value={rawSignals.face.lookUp.toFixed(2)} />
-                <Metric label="Head up" value={rawSignals.face.headTiltUp.toFixed(2)} />
-                <Metric label="Tongue" value={rawSignals.face.tongueOut.toFixed(2)} />
-                <Metric label="Smile" value={rawSignals.face.smile.toFixed(2)} />
-                <Metric label="Mouth d" value={normalizedSignals.face.mouthOpenDelta.toFixed(2)} />
-                <Metric label="Eyes d" value={normalizedSignals.face.eyeOpennessDelta.toFixed(2)} />
-                <Metric label="Brow d" value={normalizedSignals.face.browFurrowDelta.toFixed(2)} />
-                <Metric label="Scale x" value={normalizedSignals.face.faceScaleRatio.toFixed(2)} />
-                <Metric label="Frown d" value={normalizedSignals.face.mouthFrownDelta.toFixed(2)} />
-                <Metric label="Look up d" value={normalizedSignals.face.lookUpDelta.toFixed(2)} />
-                <Metric label="Head up d" value={normalizedSignals.face.headTiltUpDelta.toFixed(2)} />
-                <Metric label="Tongue d" value={normalizedSignals.face.tongueOutDelta.toFixed(2)} />
-                <Metric label="Smile d" value={normalizedSignals.face.smileDelta.toFixed(2)} />
-              </div>
-
-              <div className="candidate-list">
-                {candidates.length > 0 ? candidates.map((candidate) => (
-                  <div key={candidate.category}>
-                    <span>{categoryLabels[candidate.category]}</span>
-                    <strong>{Math.round(candidate.score * 100)}%</strong>
-                  </div>
-                )) : <span>No candidates</span>}
-              </div>
-
-              <div className="preview-row">
-                {(Object.keys(categoryLabels) as MemeCategory[]).map((category) => (
-                  <button key={category} onClick={() => previewCategory(category)}>
-                    {categoryLabels[category]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
       </section>
     </main>
   );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function formatRatios(values: number[]): string {
-  return values.length > 0 ? values.map((value) => value.toFixed(2)).join(' / ') : '-';
 }
