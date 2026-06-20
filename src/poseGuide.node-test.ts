@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { evaluatePoseGuide } from './poseGuide.ts';
 import type { NormalizedSignals } from './calibration.ts';
-import type { MemeCategory } from './memeTypes.ts';
 
 const neutralSignals: NormalizedSignals = {
   hands: {
@@ -18,9 +17,7 @@ const neutralSignals: NormalizedSignals = {
     palmCenterXRatio: [],
     palmCenterYRatio: [],
     handHeightRatio: [],
-    raisedHandsWithThumbs: 0,
-    palmsTogetherNearFace: false,
-    fingerGunAtCamera: false
+    raisedHandsWithThumbs: 0
   },
   face: {
     facePresent: true,
@@ -32,12 +29,9 @@ const neutralSignals: NormalizedSignals = {
     faceScaleRatio: 1,
     mouthFrownDelta: 0,
     lookUpDelta: 0,
-    lookDownDelta: 0,
     tongueOutDelta: 0,
     smileDelta: 0,
-    headTiltUpDelta: 0,
-    headTiltDownDelta: 0,
-    headTiltSideDelta: 0
+    headTiltUpDelta: 0
   }
 };
 
@@ -127,36 +121,5 @@ describe('evaluatePoseGuide', () => {
     }, 'happy');
 
     assert.equal(result.status, 'matched');
-  });
-
-  it('points captured-only memes to the Developer capture workflow', () => {
-    const capturedOnlyCategories: MemeCategory[] = ['lets-larp', 'no-idea-cuh', 'son', 'tf', 'zoltraak'];
-
-    for (const category of capturedOnlyCategories) {
-      const result = evaluatePoseGuide({
-        ...neutralSignals,
-        hands: {
-          ...neutralSignals.hands,
-          handCount: 2,
-          raisedOpenPalms: 2,
-          fingerGunAtCamera: true,
-          palmsTogetherNearFace: true
-        },
-        face: {
-          ...neutralSignals.face,
-          headTiltUpDelta: 0.28,
-          headTiltDownDelta: 0.16,
-          headTiltSideDelta: 0.09,
-          squintDelta: 0.14
-        }
-      }, category);
-
-      assert.equal(result.status, 'waiting');
-      assert.equal(result.hint, 'Record good examples in Developer');
-      assert.deepEqual(result.checks.map((check) => check.label), [
-        'Record good examples',
-        'Record bad examples'
-      ]);
-    }
   });
 });

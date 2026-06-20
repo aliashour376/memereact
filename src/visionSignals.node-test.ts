@@ -92,29 +92,6 @@ describe('deriveVisionSignals', () => {
     assert.deepEqual(result.hands.handHeightRatio, [0.03, 0.03]);
   });
 
-  it('detects two palms pressed together near the face', () => {
-    const face = createFace();
-    const leftPalm = createPalmCluster(0.47, 0.58);
-    const rightPalm = createPalmCluster(0.53, 0.58);
-
-    const result = deriveVisionSignals(
-      { landmarks: [leftPalm, rightPalm] } as never,
-      { faceLandmarks: [face], faceBlendshapes: [{ categories: [] }] } as never
-    );
-
-    assert.equal(result.hands.palmsTogetherNearFace, true);
-  });
-
-  it('detects a finger-gun hand aimed toward the camera', () => {
-    const result = deriveVisionSignals(
-      { landmarks: [createFingerGunAtCameraHand()] } as never,
-      { faceLandmarks: [createFace()], faceBlendshapes: [{ categories: [] }] } as never
-    );
-
-    assert.equal(result.hands.fingerGunAtCamera, true);
-    assert.equal(result.hands.raisedOpenPalms, 0);
-  });
-
   it('limits the thinking zone to the mouth and chin area', () => {
     const face = createFace();
     const sideFaceHand = Array.from({ length: 21 }, () => ({ x: 0.28, y: 0.45, z: 0 }));
@@ -158,40 +135,6 @@ describe('deriveVisionSignals', () => {
     );
 
     assert.ok(result.face.headTiltUp > 0);
-  });
-
-  it('derives downward gaze and head tilt cues', () => {
-    const face = createFace();
-    face[1] = { x: 0.5, y: 0.58, z: 0 };
-
-    const result = deriveVisionSignals(
-      null,
-      {
-        faceLandmarks: [face],
-        faceBlendshapes: [{
-          categories: [
-            { categoryName: 'eyeLookDownLeft', score: 0.4 },
-            { categoryName: 'eyeLookDownRight', score: 0.6 }
-          ]
-        }]
-      } as never
-    );
-
-    assert.equal(result.face.lookDown, 0.5);
-    assert.ok(result.face.headTiltDown > 0);
-  });
-
-  it('derives side head tilt from uneven eye corners', () => {
-    const face = createFace();
-    face[33] = { x: 0.36, y: 0.44, z: 0 };
-    face[263] = { x: 0.64, y: 0.5, z: 0 };
-
-    const result = deriveVisionSignals(
-      null,
-      { faceLandmarks: [face], faceBlendshapes: [{ categories: [] }] } as never
-    );
-
-    assert.ok(result.face.headTiltSide > 0.18);
   });
 
   it('derives tongue-out and smile face signals from blendshapes', () => {
@@ -258,8 +201,6 @@ function createFace() {
   face[152] = { x: 0.5, y: 0.8, z: 0 };
   face[234] = { x: 0.3, y: 0.5, z: 0 };
   face[454] = { x: 0.7, y: 0.5, z: 0 };
-  face[33] = { x: 0.36, y: 0.47, z: 0 };
-  face[263] = { x: 0.64, y: 0.47, z: 0 };
   face[1] = { x: 0.5, y: 0.47, z: 0 };
   face[13] = { x: 0.5, y: 0.61, z: 0 };
   face[14] = { x: 0.5, y: 0.67, z: 0 };
@@ -287,30 +228,6 @@ function createThinkingFingerHand() {
   hand[12] = { x: 0.63, y: 0.77, z: 0 };
   hand[16] = { x: 0.65, y: 0.78, z: 0 };
   hand[20] = { x: 0.67, y: 0.78, z: 0 };
-
-  return hand;
-}
-
-function createFingerGunAtCameraHand() {
-  const hand = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.58, z: 0 }));
-
-  hand[0] = { x: 0.5, y: 0.64, z: 0 };
-  hand[3] = { x: 0.45, y: 0.53, z: -0.01 };
-  hand[4] = { x: 0.43, y: 0.43, z: -0.02 };
-  hand[5] = { x: 0.51, y: 0.54, z: 0 };
-  hand[6] = { x: 0.51, y: 0.5, z: -0.03 };
-  hand[7] = { x: 0.5, y: 0.49, z: -0.06 };
-  hand[8] = { x: 0.5, y: 0.48, z: -0.09 };
-
-  hand[9] = { x: 0.54, y: 0.56, z: 0 };
-  hand[10] = { x: 0.55, y: 0.55, z: 0 };
-  hand[12] = { x: 0.56, y: 0.59, z: 0 };
-  hand[13] = { x: 0.56, y: 0.57, z: 0 };
-  hand[14] = { x: 0.57, y: 0.56, z: 0 };
-  hand[16] = { x: 0.58, y: 0.6, z: 0 };
-  hand[17] = { x: 0.58, y: 0.58, z: 0 };
-  hand[18] = { x: 0.59, y: 0.57, z: 0 };
-  hand[20] = { x: 0.6, y: 0.61, z: 0 };
 
   return hand;
 }

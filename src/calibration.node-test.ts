@@ -16,12 +16,9 @@ const neutralSample: CalibrationSample = {
   faceScale: 0.2,
   mouthFrown: 0.05,
   lookUp: 0.04,
-  lookDown: 0.03,
   tongueOut: 0.07,
   smile: 0.09,
-  headTiltUp: 0.03,
-  headTiltDown: 0.02,
-  headTiltSide: 0.01
+  headTiltUp: 0.03
 };
 
 describe('calibration', () => {
@@ -40,9 +37,7 @@ describe('calibration', () => {
         palmCenterXRatio: [],
         palmCenterYRatio: [],
         handHeightRatio: [],
-        raisedHandsWithThumbs: 0,
-        palmsTogetherNearFace: false,
-        fingerGunAtCamera: false
+        raisedHandsWithThumbs: 0
       },
       face: {
         facePresent: true,
@@ -53,12 +48,9 @@ describe('calibration', () => {
         faceScale: 0.2,
         mouthFrown: 0.05,
         lookUp: 0.04,
-        lookDown: 0.03,
         tongueOut: 0.7,
         smile: 0.6,
-        headTiltUp: 0.03,
-        headTiltDown: 0.02,
-        headTiltSide: 0.01
+        headTiltUp: 0.03
       }
     };
 
@@ -70,12 +62,9 @@ describe('calibration', () => {
       faceScale: 0.2,
       mouthFrown: 0.05,
       lookUp: 0.04,
-      lookDown: 0.03,
       tongueOut: 0.7,
       smile: 0.6,
-      headTiltUp: 0.03,
-      headTiltDown: 0.02,
-      headTiltSide: 0.01
+      headTiltUp: 0.03
     });
   });
 
@@ -95,12 +84,9 @@ describe('calibration', () => {
       faceScale: 0.22,
       mouthFrown: 0.05,
       lookUp: 0.04,
-      lookDown: 0.03,
       tongueOut: 0.07,
       smile: 0.09,
-      headTiltUp: 0.03,
-      headTiltDown: 0.02,
-      headTiltSide: 0.01
+      headTiltUp: 0.03
     });
   });
 
@@ -119,9 +105,7 @@ describe('calibration', () => {
         palmCenterXRatio: [],
         palmCenterYRatio: [],
         handHeightRatio: [],
-        raisedHandsWithThumbs: 0,
-        palmsTogetherNearFace: false,
-        fingerGunAtCamera: false
+        raisedHandsWithThumbs: 0
       },
       face: {
         facePresent: true,
@@ -132,12 +116,9 @@ describe('calibration', () => {
         faceScale: 0.33,
         mouthFrown: 0.2,
         lookUp: 0.31,
-        lookDown: 0.23,
         tongueOut: 0.7,
         smile: 0.6,
-        headTiltUp: 0.21,
-        headTiltDown: 0.12,
-        headTiltSide: 0.08
+        headTiltUp: 0.21
       }
     };
 
@@ -153,12 +134,9 @@ describe('calibration', () => {
         faceScaleRatio: 1.65,
         mouthFrownDelta: 0.15,
         lookUpDelta: 0.27,
-        lookDownDelta: 0.2,
         tongueOutDelta: 0.63,
         smileDelta: 0.51,
-        headTiltUpDelta: 0.18,
-        headTiltDownDelta: 0.1,
-        headTiltSideDelta: 0.07
+        headTiltUpDelta: 0.18
       }
     });
   });
@@ -178,9 +156,7 @@ describe('calibration', () => {
         palmCenterXRatio: [],
         palmCenterYRatio: [],
         handHeightRatio: [],
-        raisedHandsWithThumbs: 0,
-        palmsTogetherNearFace: false,
-        fingerGunAtCamera: false
+        raisedHandsWithThumbs: 0
       },
       face: {
         facePresent: false,
@@ -191,12 +167,9 @@ describe('calibration', () => {
         faceScale: 0,
         mouthFrown: 0,
         lookUp: 0,
-        lookDown: 0,
         tongueOut: 0,
         smile: 0,
-        headTiltUp: 0,
-        headTiltDown: 0,
-        headTiltSide: 0
+        headTiltUp: 0
       }
     };
 
@@ -212,12 +185,9 @@ describe('calibration', () => {
         faceScaleRatio: 0,
         mouthFrownDelta: 0,
         lookUpDelta: 0,
-        lookDownDelta: 0,
         tongueOutDelta: 0,
         smileDelta: 0,
-        headTiltUpDelta: 0,
-        headTiltDownDelta: 0,
-        headTiltSideDelta: 0
+        headTiltUpDelta: 0
       }
     });
   });

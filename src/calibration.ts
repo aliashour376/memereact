@@ -8,12 +8,9 @@ export interface CalibrationSample {
   faceScale: number;
   mouthFrown: number;
   lookUp: number;
-  lookDown: number;
   tongueOut: number;
   smile: number;
   headTiltUp: number;
-  headTiltDown: number;
-  headTiltSide: number;
 }
 
 export interface CalibrationBaseline extends CalibrationSample {}
@@ -28,12 +25,9 @@ export interface NormalizedFaceSignals {
   faceScaleRatio: number;
   mouthFrownDelta: number;
   lookUpDelta: number;
-  lookDownDelta: number;
   tongueOutDelta: number;
   smileDelta: number;
   headTiltUpDelta: number;
-  headTiltDownDelta: number;
-  headTiltSideDelta: number;
 }
 
 export interface NormalizedSignals {
@@ -69,12 +63,9 @@ export function createCalibrationSession(requiredSamples: number) {
         faceScale: round(average(samples.map((sample) => sample.faceScale))),
         mouthFrown: round(average(samples.map((sample) => sample.mouthFrown))),
         lookUp: round(average(samples.map((sample) => sample.lookUp))),
-        lookDown: round(average(samples.map((sample) => sample.lookDown))),
         tongueOut: round(average(samples.map((sample) => sample.tongueOut))),
         smile: round(average(samples.map((sample) => sample.smile))),
-        headTiltUp: round(average(samples.map((sample) => sample.headTiltUp))),
-        headTiltDown: round(average(samples.map((sample) => sample.headTiltDown))),
-        headTiltSide: round(average(samples.map((sample) => sample.headTiltSide)))
+        headTiltUp: round(average(samples.map((sample) => sample.headTiltUp)))
       };
     }
   };
@@ -93,12 +84,9 @@ export function toCalibrationSample(signals: VisionSignals): CalibrationSample |
     faceScale: signals.face.faceScale,
     mouthFrown: signals.face.mouthFrown,
     lookUp: signals.face.lookUp,
-    lookDown: signals.face.lookDown,
     tongueOut: signals.face.tongueOut,
     smile: signals.face.smile,
-    headTiltUp: signals.face.headTiltUp,
-    headTiltDown: signals.face.headTiltDown,
-    headTiltSide: signals.face.headTiltSide
+    headTiltUp: signals.face.headTiltUp
   };
 }
 
@@ -119,12 +107,9 @@ export function normalizeSignals(
         faceScaleRatio: 0,
         mouthFrownDelta: 0,
         lookUpDelta: 0,
-        lookDownDelta: 0,
         tongueOutDelta: 0,
         smileDelta: 0,
-        headTiltUpDelta: 0,
-        headTiltDownDelta: 0,
-        headTiltSideDelta: 0
+        headTiltUpDelta: 0
       }
     };
   }
@@ -141,12 +126,9 @@ export function normalizeSignals(
       faceScaleRatio: round(baseline.faceScale > 0 ? signals.face.faceScale / baseline.faceScale : 0),
       mouthFrownDelta: round(Math.max(0, signals.face.mouthFrown - baseline.mouthFrown)),
       lookUpDelta: round(Math.max(0, signals.face.lookUp - baseline.lookUp)),
-      lookDownDelta: round(Math.max(0, signals.face.lookDown - baseline.lookDown)),
       tongueOutDelta: round(Math.max(0, signals.face.tongueOut - baseline.tongueOut)),
       smileDelta: round(Math.max(0, signals.face.smile - baseline.smile)),
-      headTiltUpDelta: round(Math.max(0, signals.face.headTiltUp - baseline.headTiltUp)),
-      headTiltDownDelta: round(Math.max(0, signals.face.headTiltDown - baseline.headTiltDown)),
-      headTiltSideDelta: round(Math.max(0, signals.face.headTiltSide - baseline.headTiltSide))
+      headTiltUpDelta: round(Math.max(0, signals.face.headTiltUp - baseline.headTiltUp))
     }
   };
 }

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { evaluateReactionRules } from './reactionRules.ts';
 import type { NormalizedSignals } from './calibration.ts';
-import type { MemeCategory } from './memeTypes.ts';
 
 const neutralSignals: NormalizedSignals = {
   hands: {
@@ -18,9 +17,7 @@ const neutralSignals: NormalizedSignals = {
     palmCenterXRatio: [],
     palmCenterYRatio: [],
     handHeightRatio: [],
-    raisedHandsWithThumbs: 0,
-    palmsTogetherNearFace: false,
-    fingerGunAtCamera: false
+    raisedHandsWithThumbs: 0
   },
   face: {
     facePresent: true,
@@ -32,12 +29,9 @@ const neutralSignals: NormalizedSignals = {
     faceScaleRatio: 1,
     mouthFrownDelta: 0,
     lookUpDelta: 0,
-    lookDownDelta: 0,
     tongueOutDelta: 0,
     smileDelta: 0,
-    headTiltUpDelta: 0,
-    headTiltDownDelta: 0,
-    headTiltSideDelta: 0
+    headTiltUpDelta: 0
   }
 };
 
@@ -68,11 +62,10 @@ describe('evaluateReactionRules', () => {
     });
 
     assert.equal(result[0]?.category, 'we-are-cooked');
-    assert.equal(result[0]?.reason, 'palms on head');
     assert.equal(result.find((candidate) => candidate.category === 'absolute-cinema'), undefined);
   });
 
-  it('scores we are cooked highest for true head contact plus expression boosts', () => {
+  it('scores we are cooked highest for true head contact plus open mouth and wide eyes', () => {
     const result = evaluateReactionRules({
       ...neutralSignals,
       hands: { ...neutralSignals.hands, headTouches: 2, sideHeadPalmContacts: 2, handsOnHead: 2, handCount: 2 },
@@ -122,15 +115,6 @@ describe('evaluateReactionRules', () => {
     });
 
     assert.equal(result[0]?.category, 'ah-hell-nah');
-  });
-
-  it('does not score ah hell nah from chin-up without an open mouth', () => {
-    const result = evaluateReactionRules({
-      ...neutralSignals,
-      face: { ...neutralSignals.face, headTiltUpDelta: 0.22 }
-    });
-
-    assert.equal(result.find((candidate) => candidate.category === 'ah-hell-nah'), undefined);
   });
 
   it('scores thinking from an index finger near the mouth', () => {
@@ -199,44 +183,6 @@ describe('evaluateReactionRules', () => {
     });
 
     assert.equal(result[0]?.category, 'happy');
-  });
-
-  it('does not score the new captured-only memes from old hand-written cues', () => {
-    const capturedOnlyCategories: MemeCategory[] = ['lets-larp', 'no-idea-cuh', 'son', 'tf', 'zoltraak'];
-    const oldCueResults = [
-      evaluateReactionRules({
-        ...neutralSignals,
-        hands: { ...neutralSignals.hands, handCount: 1, fingerGunAtCamera: true },
-        face: { ...neutralSignals.face, headTiltSideDelta: 0.09 }
-      }),
-      evaluateReactionRules({
-        ...neutralSignals,
-        hands: {
-          ...neutralSignals.hands,
-          handCount: 2,
-          raisedOpenPalms: 2,
-          palmCenterYRatio: [0.62, 0.68],
-          handHeightRatio: [0.22, 0.24]
-        }
-      }),
-      evaluateReactionRules({
-        ...neutralSignals,
-        hands: { ...neutralSignals.hands, handCount: 2, palmsTogetherNearFace: true }
-      }),
-      evaluateReactionRules({
-        ...neutralSignals,
-        face: { ...neutralSignals.face, headTiltDownDelta: 0.17, lookDownDelta: 0.18 }
-      }),
-      evaluateReactionRules({
-        ...neutralSignals,
-        face: { ...neutralSignals.face, headTiltUpDelta: 0.28, mouthOpenDelta: 0.01 }
-      })
-    ];
-
-    assert.equal(
-      oldCueResults.flat().some((candidate) => capturedOnlyCategories.includes(candidate.category)),
-      false
-    );
   });
 
   it('returns no candidates for neutral signals', () => {

@@ -13,12 +13,7 @@ const catalog: MemeCatalog = {
   ],
   'ah-hell-nah': [],
   thinking: [],
-  happy: [],
-  'lets-larp': [],
-  'no-idea-cuh': [],
-  son: [],
-  tf: [],
-  zoltraak: []
+  happy: []
 };
 
 describe('memeLibrary', () => {
