@@ -715,29 +715,30 @@ h1 {
   flex: 1;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 8px;
   min-height: 0;
-  overflow: auto;
-  padding-top: 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 8px;
 }
 
 .guide-targets {
   display: grid;
-  gap: 8px;
+  gap: 5px;
 }
 
 .guide-targets button {
-  min-height: 40px;
+  min-height: 31px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 8px;
   color: #f6f2ea;
   background: rgba(255, 255, 255, 0.055);
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 800;
   text-align: left;
 }
@@ -750,8 +751,8 @@ h1 {
 
 .guide-meter {
   display: grid;
-  gap: 10px;
-  padding: 13px;
+  gap: 7px;
+  padding: 9px 10px;
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.055);
@@ -766,18 +767,18 @@ h1 {
 
 .guide-meter strong {
   color: #fffdf8;
-  font-size: 1.04rem;
+  font-size: 0.92rem;
 }
 
 .guide-meter span {
   color: #d9d4cc;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
 .guide-meter-track {
   width: 100%;
-  height: 10px;
+  height: 7px;
   overflow: hidden;
   display: block;
   border-radius: 999px;
@@ -799,9 +800,9 @@ h1 {
 
 .guide-hint {
   display: grid;
-  gap: 5px;
-  min-height: 66px;
-  padding: 12px;
+  gap: 3px;
+  min-height: 50px;
+  padding: 9px 10px;
   border: 1px solid rgba(255, 202, 107, 0.22);
   border-radius: 8px;
   background: rgba(255, 202, 107, 0.08);
@@ -809,15 +810,15 @@ h1 {
 
 .guide-hint span {
   color: #ffca6b;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .guide-hint strong {
   color: #fffdf8;
-  font-size: 0.98rem;
-  line-height: 1.2;
+  font-size: 0.86rem;
+  line-height: 1.15;
 }
 
 .guide-hint-matched {
@@ -831,16 +832,16 @@ h1 {
 
 .guide-checks {
   display: grid;
-  gap: 8px;
+  gap: 5px;
 }
 
 .guide-checks div {
-  min-height: 40px;
+  min-height: 31px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 11px;
+  gap: 8px;
+  padding: 0 9px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #d9d4cc;
@@ -855,13 +856,13 @@ h1 {
 
 .guide-checks span {
   color: inherit;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
 .guide-checks strong {
   color: #fffdf8;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
 }
 
 .guide-badge {
