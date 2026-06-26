@@ -1,6 +1,7 @@
 :root {
   --app-ui-scale: 0.737;
   --app-ui-scale-inverse: 1.3568521031;
+  --desktop-stage-height: 560px;
   color: #f6f2ea;
   background: #08090b;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -206,7 +207,8 @@ h1 {
 
 .camera-panel {
   position: relative;
-  min-height: 560px;
+  height: var(--desktop-stage-height);
+  min-height: var(--desktop-stage-height);
   overflow: hidden;
   border-radius: 8px;
 }
@@ -225,7 +227,7 @@ h1 {
 .camera-feed {
   width: 100%;
   height: 100%;
-  min-height: 560px;
+  min-height: var(--desktop-stage-height);
   display: block;
   object-fit: cover;
   transform: scaleX(-1);
@@ -336,7 +338,9 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 560px;
+  height: var(--desktop-stage-height);
+  min-height: var(--desktop-stage-height);
+  overflow: hidden;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -492,7 +496,8 @@ h1 {
   padding: 18px;
   display: flex;
   flex-direction: column;
-  min-height: 560px;
+  height: var(--desktop-stage-height);
+  min-height: var(--desktop-stage-height);
 }
 
 .meme-panel::before {
@@ -707,8 +712,12 @@ h1 {
 .guide-panel {
   position: relative;
   z-index: 1;
+  flex: 1;
   display: grid;
+  align-content: start;
   gap: 14px;
+  min-height: 0;
+  overflow: auto;
   padding-top: 14px;
 }
 
@@ -977,11 +986,13 @@ h1 {
   .camera-panel,
   .camera-feed,
   .meme-panel {
+    height: auto;
     min-height: 430px;
   }
 
   .recording-dock,
   .guide-dock {
+    height: auto;
     min-height: auto;
   }
 
